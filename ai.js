@@ -9,6 +9,7 @@ const DATA_FILE = path.join(__dirname, "credits-store.json");
 const INDEX_FILE = path.join(__dirname, "index.html");
 const STYLES_FILE = path.join(__dirname, "styles.css");
 const APP_FILE = path.join(__dirname, "app.js");
+const SITE_DATA_FILE = path.join(__dirname, "site-data.js");
 const ADMIN_LOGIN_FILE = path.join(__dirname, "admin-login.html");
 const ADMIN_LOGIN_SCRIPT_FILE = path.join(__dirname, "admin-login.js");
 const ADMIN_DASHBOARD_FILE = path.join(__dirname, "admin-dashboard.html");
@@ -46,6 +47,9 @@ app.get("/styles.css", (req, res) => {
 
 app.get("/app.js", (req, res) => {
     res.sendFile(APP_FILE);
+});
+app.get("/site-data.js", (req, res) => {
+    res.sendFile(SITE_DATA_FILE);
 });
 app.get("/admin-login.html", (req, res) => {
     res.sendFile(ADMIN_LOGIN_FILE);
