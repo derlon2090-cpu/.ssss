@@ -32,6 +32,9 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", (req, res) => {
     res.sendFile(INDEX_FILE);
 });
+app.get("/index.html", (req, res) => {
+    res.sendFile(INDEX_FILE);
+});
 
 app.get(/^\/generated-[a-z]+-\d+\.svg$/, (req, res) => {
     res.sendFile(path.join(__dirname, req.path.replace(/^\//, "")));
@@ -43,6 +46,24 @@ app.get("/styles.css", (req, res) => {
 
 app.get("/app.js", (req, res) => {
     res.sendFile(APP_FILE);
+});
+app.get("/admin-login.html", (req, res) => {
+    res.sendFile(ADMIN_LOGIN_FILE);
+});
+app.get("/admin-dashboard.html", (req, res) => {
+    res.sendFile(ADMIN_DASHBOARD_FILE);
+});
+app.get("/admin-login.js", (req, res) => {
+    res.sendFile(ADMIN_LOGIN_SCRIPT_FILE);
+});
+app.get("/admin-dashboard.js", (req, res) => {
+    res.sendFile(ADMIN_DASHBOARD_SCRIPT_FILE);
+});
+app.get("/studio.html", (req, res) => {
+    res.sendFile(STUDIO_FILE);
+});
+app.get("/library.html", (req, res) => {
+    res.sendFile(LIBRARY_FILE);
 });
 app.get("/admin", (req, res) => {
     res.redirect("/admin/login");

@@ -10,8 +10,6 @@ const homeAdminOverlay = document.getElementById("home-admin-overlay");
 const homeAdminBackdrop = document.querySelector("[data-close-home-admin='true']");
 const homeAdminLogin = document.getElementById("home-admin-login");
 const homeAdminMessage = document.getElementById("home-admin-message");
-const contactForm = document.getElementById("contact-form");
-const contactMessage = document.getElementById("contact-message");
 
 function setLookupMessage(text, type = "info") {
     lookupMessage.textContent = text || "";
@@ -21,11 +19,6 @@ function setLookupMessage(text, type = "info") {
 function setAdminMessage(text, type = "info") {
     homeAdminMessage.textContent = text || "";
     homeAdminMessage.className = text ? `message ${type}` : "message";
-}
-
-function setContactMessage(text, type = "info") {
-    contactMessage.textContent = text || "";
-    contactMessage.className = text ? `message ${type}` : "message";
 }
 
 async function api(url, options = {}) {
@@ -81,7 +74,7 @@ lookupForm.addEventListener("submit", async (event) => {
             body: JSON.stringify({ code })
         });
         sessionStorage.setItem("activeCreditsCode", code.toUpperCase());
-        window.location.href = `/studio?code=${encodeURIComponent(code.toUpperCase())}`;
+        window.location.href = `/studio.html?code=${encodeURIComponent(code.toUpperCase())}`;
     } catch (error) {
         setLookupMessage(error.message, "error");
     }
@@ -101,28 +94,8 @@ homeAdminLogin.addEventListener("submit", async (event) => {
             })
         });
         localStorage.setItem("creditsAdminToken", response.data.token);
-        window.location.href = "/admin/dashboard";
+        window.location.href = "/admin-dashboard.html";
     } catch (error) {
         setAdminMessage(error.message, "error");
-    }
-});
-
-contactForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const formData = new FormData(contactForm);
-
-    try {
-        await api("/api/contact-submissions", {
-            method: "POST",
-            body: JSON.stringify({
-                name: formData.get("name"),
-                email: formData.get("email"),
-                message: formData.get("message")
-            })
-        });
-        contactForm.reset();
-        setContactMessage("تم إرسال اقتراحك بنجاح، وسيظهر داخل لوحة الأدمن.", "success");
-    } catch (error) {
-        setContactMessage(error.message, "error");
     }
 });

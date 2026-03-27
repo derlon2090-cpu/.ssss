@@ -1,8 +1,7 @@
 const adminTokenKey = "creditsAdminToken";
 const adminState = {
     token: localStorage.getItem(adminTokenKey) || "",
-    codes: [],
-    contactSubmissions: []
+    codes: []
 };
 
 const dashboardElements = {
@@ -12,8 +11,7 @@ const dashboardElements = {
     message: document.getElementById("admin-form-message"),
     codesGrid: document.getElementById("admin-codes-grid"),
     refreshButton: document.getElementById("refresh-admin-codes"),
-    activity: document.getElementById("admin-activity"),
-    contactSubmissions: document.getElementById("admin-contact-submissions")
+    activity: document.getElementById("admin-activity")
 };
 
 function setDashboardMessage(text, type = "info") {
@@ -105,30 +103,9 @@ function renderActivity(activity) {
     `).join("") : `<div class="empty-state">لا توجد عمليات مسجلة لهذا الكود.</div>`;
 }
 
-function renderContactSubmissions() {
-    if (!adminState.contactSubmissions.length) {
-        dashboardElements.contactSubmissions.innerHTML = `<div class="empty-state">لا توجد اقتراحات جديدة حتى الآن.</div>`;
-        return;
-    }
-
-    dashboardElements.contactSubmissions.innerHTML = adminState.contactSubmissions.map((submission) => `
-        <article class="code-card">
-            <div class="work-topline">
-                <div>
-                    <strong>${escapeHtml(submission.name || "زائر الموقع")}</strong>
-                    <div class="work-meta">${escapeHtml(submission.email)}</div>
-                </div>
-                <span class="mini-badge">${escapeHtml(submission.status || "new")}</span>
-            </div>
-            <p class="work-prompt">${escapeHtml(submission.message)}</p>
-            <div class="work-meta">${new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(submission.createdAt))}</div>
-        </article>
-    `).join("");
-}
-
 async function loadSession() {
     if (!adminState.token) {
-        window.location.href = "/admin/login";
+        window.location.href = "/admin-login.html";
         return;
     }
 
@@ -137,7 +114,7 @@ async function loadSession() {
         dashboardElements.sessionLabel.textContent = `مسجل كـ ${response.data.username}`;
     } catch (error) {
         localStorage.removeItem(adminTokenKey);
-        window.location.href = "/admin/login";
+        window.location.href = "/admin-login.html";
     }
 }
 
@@ -145,12 +122,6 @@ async function loadCodes() {
     const response = await adminApi("/api/admin/codes");
     adminState.codes = response.data.codes;
     renderCodes();
-}
-
-async function loadContactSubmissions() {
-    const response = await adminApi("/api/admin/contact-submissions");
-    adminState.contactSubmissions = response.data.contactSubmissions || [];
-    renderContactSubmissions();
 }
 
 dashboardElements.form.addEventListener("submit", async (event) => {
@@ -227,7 +198,6 @@ dashboardElements.codesGrid.addEventListener("click", async (event) => {
 dashboardElements.refreshButton.addEventListener("click", async () => {
     try {
         await loadCodes();
-        await loadContactSubmissions();
     } catch (error) {
         setDashboardMessage(error.message, "error");
     }
@@ -244,11 +214,10 @@ dashboardElements.logoutButton.addEventListener("click", async () => {
     }
 
     localStorage.removeItem(adminTokenKey);
-    window.location.href = "/admin/login";
+    window.location.href = "/admin-login.html";
 });
 
 (async () => {
     await loadSession();
     await loadCodes();
-    await loadContactSubmissions();
 })();

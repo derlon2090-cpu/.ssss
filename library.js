@@ -39,10 +39,15 @@ async function libraryApi(url, options = {}) {
         },
         ...options
     });
-    const payload = await response.json().catch(() => ({
-        success: false,
-        message: "تعذر قراءة الاستجابة."
-    }));
+
+    const raw = await response.text();
+    let payload = {};
+
+    try {
+        payload = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        throw new Error(raw || "تعذر قراءة الاستجابة.");
+    }
 
     if (!response.ok || payload.success === false) {
         throw new Error(payload.message || "حدث خطأ غير متوقع.");
@@ -125,14 +130,14 @@ function renderActivity() {
 async function loadLibrary() {
     libraryState.code = getCodeFromLocation();
     if (!libraryState.code) {
-        window.location.href = "/";
+        window.location.href = "/index.html";
         return;
     }
 
     sessionStorage.setItem("activeCreditsCode", libraryState.code);
-    libraryElements.backToStudio.href = `/studio?code=${encodeURIComponent(libraryState.code)}`;
+    libraryElements.backToStudio.href = `/studio.html?code=${encodeURIComponent(libraryState.code)}`;
     if (libraryElements.backToStudioTop) {
-        libraryElements.backToStudioTop.href = `/studio?code=${encodeURIComponent(libraryState.code)}`;
+        libraryElements.backToStudioTop.href = `/studio.html?code=${encodeURIComponent(libraryState.code)}`;
     }
     const [lookupResponse, activityResponse] = await Promise.all([
         libraryApi("/api/codes/lookup", {

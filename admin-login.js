@@ -45,7 +45,7 @@ loginForm.addEventListener("submit", async (event) => {
             })
         });
         localStorage.setItem("creditsAdminToken", response.data.token);
-        window.location.href = "/admin/dashboard";
+        window.location.href = "/admin-dashboard.html";
     } catch (error) {
         setLoginMessage(error.message, "error");
     }

@@ -86,10 +86,15 @@ async function studioApi(url, options = {}) {
         },
         ...options
     });
-    const payload = await response.json().catch(() => ({
-        success: false,
-        message: "تعذر قراءة الاستجابة."
-    }));
+
+    const raw = await response.text();
+    let payload = {};
+
+    try {
+        payload = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        throw new Error(raw || "تعذر قراءة الاستجابة.");
+    }
 
     if (!response.ok || payload.success === false) {
         throw new Error(payload.message || "حدث خطأ غير متوقع.");
@@ -230,7 +235,7 @@ function renderLatest(work, intelligence) {
                 <p class="work-prompt">${escapeHtml(work.prompt)}</p>
                 <div class="work-actions">
                     <a class="card-button" href="${escapeHtml(work.fileUrl)}" target="_blank" rel="noreferrer">تحميل / عرض</a>
-                    <a class="card-button" href="/library?code=${encodeURIComponent(studioState.code)}">كل المكتبة</a>
+                    <a class="card-button" href="/library.html?code=${encodeURIComponent(studioState.code)}">كل المكتبة</a>
                 </div>
             </div>
         </article>
@@ -288,12 +293,12 @@ function renderActivityPreview() {
 async function loadWorkspace() {
     studioState.code = getCodeFromLocation();
     if (!studioState.code) {
-        window.location.href = "/";
+        window.location.href = "/index.html";
         return;
     }
 
     sessionStorage.setItem("activeCreditsCode", studioState.code);
-    studioElements.libraryLink.href = `/library?code=${encodeURIComponent(studioState.code)}`;
+    studioElements.libraryLink.href = `/library.html?code=${encodeURIComponent(studioState.code)}`;
     const [lookupResponse, activityResponse] = await Promise.all([
         studioApi("/api/codes/lookup", {
             method: "POST",
