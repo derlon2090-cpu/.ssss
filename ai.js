@@ -44,7 +44,16 @@ app.get("/styles.css", (req, res) => {
 app.get("/app.js", (req, res) => {
     res.sendFile(APP_FILE);
 });
+app.get("/admin", (req, res) => {
+    res.redirect("/admin/login");
+});
+app.get("/admin/", (req, res) => {
+    res.redirect("/admin/login");
+});
 app.get("/admin/login", (req, res) => {
+    res.sendFile(ADMIN_LOGIN_FILE);
+});
+app.get("/admin/login/", (req, res) => {
     res.sendFile(ADMIN_LOGIN_FILE);
 });
 
@@ -55,11 +64,17 @@ app.get("/admin/login.js", (req, res) => {
 app.get("/admin/dashboard", (req, res) => {
     res.sendFile(ADMIN_DASHBOARD_FILE);
 });
+app.get("/admin/dashboard/", (req, res) => {
+    res.sendFile(ADMIN_DASHBOARD_FILE);
+});
 
 app.get("/admin/dashboard.js", (req, res) => {
     res.sendFile(ADMIN_DASHBOARD_SCRIPT_FILE);
 });
 app.get("/studio", (req, res) => {
+    res.sendFile(STUDIO_FILE);
+});
+app.get("/studio/", (req, res) => {
     res.sendFile(STUDIO_FILE);
 });
 
@@ -68,6 +83,9 @@ app.get("/studio.js", (req, res) => {
 });
 
 app.get("/library", (req, res) => {
+    res.sendFile(LIBRARY_FILE);
+});
+app.get("/library/", (req, res) => {
     res.sendFile(LIBRARY_FILE);
 });
 

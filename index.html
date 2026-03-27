@@ -15,23 +15,23 @@
             </div>
             <div class="topbar-actions">
                 <span class="topbar-code">
-                    <strong>دخول سريع</strong>
-                    <span>تحقق من الكود أو افتح لوحة الأدمن</span>
+                    <strong>الدخول السريع</strong>
+                    <span>تحقق من الكود أو افتح لوحة الأدمن من داخل الموقع</span>
                 </span>
-                <a class="primary-button inline-link" href="/admin/login">دخول الأدمن</a>
+                <button id="open-home-admin" class="primary-button admin-entry-button" type="button">دخول الأدمن</button>
             </div>
         </header>
 
         <header class="hero hero-user">
             <div class="hero-copy">
                 <p class="eyebrow">Smart Credits Studio</p>
-                <h1>أدخل الكود ثم انتقل مباشرة إلى مساحة الإنشاء</h1>
+                <h1>أنشئ صورًا وفيديوهات بسهولة باستخدام الكود</h1>
                 <p class="hero-text">
-                    التجربة أصبحت أوضح: صفحة للتحقق من الكود، ثم مساحة إنشاء مستقلة، ثم مكتبة للأعمال وسجل كامل للعمليات.
+                    تجربة واضحة وسريعة: أدخل الكود، انتقل إلى مساحة الإنشاء، ثم راجع الأعمال والمكتبة والسجل في واجهة مرتبة.
                 </p>
                 <div class="hero-actions">
-                    <a class="primary-button inline-link" href="#lookup-form">ابدأ الآن</a>
-                    <a class="ghost-button inline-link" href="/admin/login">لوحة التحكم</a>
+                    <button id="start-now-button" class="primary-button" type="button">ابدأ الآن</button>
+                    <button id="open-home-admin-secondary" class="ghost-button" type="button">لوحة التحكم</button>
                 </div>
             </div>
             <div class="hero-note">
@@ -40,7 +40,7 @@
             </div>
         </header>
 
-        <section class="panel compact-panel home-entry">
+        <section class="panel compact-panel home-entry" id="lookup-section">
             <div class="section-head">
                 <div>
                     <p class="section-kicker">Step 1</p>
@@ -55,6 +55,57 @@
 
             <div id="lookup-message" class="message"></div>
         </section>
+
+        <footer class="site-footer">
+            <div class="footer-card">
+                <div>
+                    <p class="section-kicker">Contact</p>
+                    <h3>بيانات التواصل</h3>
+                    <p class="hero-text">يمكنك تخصيص بيانات التواصل النهائية لاحقًا، لكن أضفت لك قسمًا أنيقًا جاهزًا أسفل الموقع.</p>
+                </div>
+                <div class="footer-links">
+                    <a class="footer-link" href="mailto:hello@smartcredits.studio">hello@smartcredits.studio</a>
+                    <a class="footer-link" href="tel:+966500000000">+966 50 000 0000</a>
+                    <a class="footer-link" href="https://instagram.com/smartcredits.studio" target="_blank" rel="noreferrer">@smartcredits.studio</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <div id="home-admin-overlay" class="admin-overlay hidden">
+        <div class="admin-overlay-backdrop" data-close-home-admin="true"></div>
+        <aside class="admin-drawer">
+            <div class="admin-drawer-head">
+                <div>
+                    <p class="section-kicker admin-kicker">منطقة خاصة</p>
+                    <h2>دخول الأدمن</h2>
+                </div>
+                <button id="close-home-admin" class="ghost-button" type="button">إغلاق</button>
+            </div>
+
+            <div class="admin-zone-note">
+                <span class="insight-label">وصول آمن</span>
+                <p>تسجيل الدخول يتم من داخل الموقع مباشرة، بدون إظهار لوحة الأدمن للمستخدم العام.</p>
+            </div>
+
+            <form id="home-admin-login" class="form-grid single-column">
+                <label>
+                    <span>اسم المستخدم</span>
+                    <input name="username" type="text" placeholder="admin" required>
+                </label>
+                <label>
+                    <span>كلمة المرور</span>
+                    <input name="password" type="password" placeholder="********" required>
+                </label>
+                <label>
+                    <span>كود الأمان</span>
+                    <input name="securityCode" type="text" placeholder="اختياري">
+                </label>
+                <button class="primary-button" type="submit">الدخول إلى لوحة التحكم</button>
+            </form>
+
+            <div id="home-admin-message" class="message"></div>
+        </aside>
     </div>
 
     <script src="/app.js"></script>
