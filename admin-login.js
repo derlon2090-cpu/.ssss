@@ -14,10 +14,15 @@ async function api(url, options = {}) {
         },
         ...options
     });
-    const payload = await response.json().catch(() => ({
-        success: false,
-        message: "تعذر قراءة الاستجابة."
-    }));
+
+    const raw = await response.text();
+    let payload = {};
+
+    try {
+        payload = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        throw new Error(raw || "تعذر قراءة الاستجابة.");
+    }
 
     if (!response.ok || payload.success === false) {
         throw new Error(payload.message || "حدث خطأ غير متوقع.");

@@ -10,6 +10,8 @@ const homeAdminOverlay = document.getElementById("home-admin-overlay");
 const homeAdminBackdrop = document.querySelector("[data-close-home-admin='true']");
 const homeAdminLogin = document.getElementById("home-admin-login");
 const homeAdminMessage = document.getElementById("home-admin-message");
+const contactForm = document.getElementById("contact-form");
+const contactMessage = document.getElementById("contact-message");
 
 function setLookupMessage(text, type = "info") {
     lookupMessage.textContent = text || "";
@@ -21,6 +23,11 @@ function setAdminMessage(text, type = "info") {
     homeAdminMessage.className = text ? `message ${type}` : "message";
 }
 
+function setContactMessage(text, type = "info") {
+    contactMessage.textContent = text || "";
+    contactMessage.className = text ? `message ${type}` : "message";
+}
+
 async function api(url, options = {}) {
     const response = await fetch(url, {
         headers: {
@@ -29,10 +36,15 @@ async function api(url, options = {}) {
         },
         ...options
     });
-    const payload = await response.json().catch(() => ({
-        success: false,
-        message: "تعذر قراءة الاستجابة."
-    }));
+
+    const raw = await response.text();
+    let payload = {};
+
+    try {
+        payload = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        throw new Error(raw || "تعذر قراءة الاستجابة.");
+    }
 
     if (!response.ok || payload.success === false) {
         throw new Error(payload.message || "حدث خطأ غير متوقع.");
@@ -92,5 +104,25 @@ homeAdminLogin.addEventListener("submit", async (event) => {
         window.location.href = "/admin/dashboard";
     } catch (error) {
         setAdminMessage(error.message, "error");
+    }
+});
+
+contactForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(contactForm);
+
+    try {
+        await api("/api/contact-submissions", {
+            method: "POST",
+            body: JSON.stringify({
+                name: formData.get("name"),
+                email: formData.get("email"),
+                message: formData.get("message")
+            })
+        });
+        contactForm.reset();
+        setContactMessage("تم إرسال اقتراحك بنجاح، وسيظهر داخل لوحة الأدمن.", "success");
+    } catch (error) {
+        setContactMessage(error.message, "error");
     }
 });

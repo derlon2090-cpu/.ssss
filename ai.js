@@ -104,8 +104,10 @@ function createEmptyStore() {
         codes: [],
         works: [],
         events: [],
+        contactSubmissions: [],
         nextWorkId: 1,
-        nextEventId: 1
+        nextEventId: 1,
+        nextContactSubmissionId: 1
     };
 }
 
@@ -155,11 +157,23 @@ function loadStore() {
                     meta: eventRecord.meta && typeof eventRecord.meta === "object" ? eventRecord.meta : {}
                 }))
                 : [],
+            contactSubmissions: Array.isArray(parsed.contactSubmissions)
+                ? parsed.contactSubmissions.map((submission) => ({
+                    ...submission,
+                    name: normalizeOptionalText(submission.name),
+                    email: normalizeOptionalText(submission.email),
+                    message: normalizeOptionalText(submission.message),
+                    status: normalizeOptionalText(submission.status) || "new"
+                }))
+                : [],
             nextWorkId: Number.isInteger(parsed.nextWorkId) && parsed.nextWorkId > 0
                 ? parsed.nextWorkId
                 : 1,
             nextEventId: Number.isInteger(parsed.nextEventId) && parsed.nextEventId > 0
                 ? parsed.nextEventId
+                : 1,
+            nextContactSubmissionId: Number.isInteger(parsed.nextContactSubmissionId) && parsed.nextContactSubmissionId > 0
+                ? parsed.nextContactSubmissionId
                 : 1
         };
     } catch (error) {
@@ -183,6 +197,19 @@ function createHttpError(status, message) {
 
 function nowIso() {
     return new Date().toISOString();
+}
+
+function parseEmail(value) {
+    const normalized = normalizeOptionalText(value);
+    if (!normalized) {
+        throw createHttpError(400, "Email is required.");
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+        throw createHttpError(400, "Email format is invalid.");
+    }
+
+    return normalized;
 }
 
 function normalizeCodeValue(value) {
@@ -517,6 +544,17 @@ function serializeEvent(eventRecord) {
         message: eventRecord.message,
         meta: eventRecord.meta || {},
         createdAt: eventRecord.createdAt
+    };
+}
+
+function serializeContactSubmission(submission) {
+    return {
+        id: submission.id,
+        name: submission.name,
+        email: submission.email,
+        message: submission.message,
+        status: submission.status,
+        createdAt: submission.createdAt
     };
 }
 
@@ -904,6 +942,20 @@ app.post("/api/admin/logout", requireAdmin, (req, res) => {
     });
 });
 
+app.get("/api/admin/contact-submissions", requireAdmin, wrap((req, res) => {
+    const contactSubmissions = store.contactSubmissions
+        .slice()
+        .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))
+        .map(serializeContactSubmission);
+
+    res.json({
+        success: true,
+        data: {
+            contactSubmissions
+        }
+    });
+}));
+
 app.get("/api/admin/codes", requireAdmin, wrap((req, res) => {
     const codes = store.codes
         .slice()
@@ -1184,6 +1236,34 @@ app.post("/api/prompt-intelligence/analyze", wrap((req, res) => {
     res.json({
         success: true,
         data: buildPromptIntelligence(prompt, type)
+    });
+}));
+
+app.post("/api/contact-submissions", wrap((req, res) => {
+    const name = normalizeName(req.body.name, "زائر الموقع");
+    const email = parseEmail(req.body.email);
+    const message = parsePrompt(req.body.message);
+
+    const submission = {
+        id: store.nextContactSubmissionId,
+        name,
+        email,
+        message,
+        status: "new",
+        createdAt: nowIso()
+    };
+
+    store.nextContactSubmissionId += 1;
+    store.contactSubmissions.unshift(submission);
+    store.contactSubmissions = store.contactSubmissions.slice(0, 500);
+    saveStore();
+
+    res.status(201).json({
+        success: true,
+        message: "Your suggestion has been sent successfully.",
+        data: {
+            submission: serializeContactSubmission(submission)
+        }
     });
 }));
 

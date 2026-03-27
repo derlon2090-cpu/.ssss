@@ -1,7 +1,8 @@
 const adminTokenKey = "creditsAdminToken";
 const adminState = {
     token: localStorage.getItem(adminTokenKey) || "",
-    codes: []
+    codes: [],
+    contactSubmissions: []
 };
 
 const dashboardElements = {
@@ -11,7 +12,8 @@ const dashboardElements = {
     message: document.getElementById("admin-form-message"),
     codesGrid: document.getElementById("admin-codes-grid"),
     refreshButton: document.getElementById("refresh-admin-codes"),
-    activity: document.getElementById("admin-activity")
+    activity: document.getElementById("admin-activity"),
+    contactSubmissions: document.getElementById("admin-contact-submissions")
 };
 
 function setDashboardMessage(text, type = "info") {
@@ -28,10 +30,15 @@ async function adminApi(url, options = {}) {
         },
         ...options
     });
-    const payload = await response.json().catch(() => ({
-        success: false,
-        message: "تعذر قراءة الاستجابة."
-    }));
+
+    const raw = await response.text();
+    let payload = {};
+
+    try {
+        payload = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        throw new Error(raw || "تعذر قراءة الاستجابة.");
+    }
 
     if (!response.ok || payload.success === false) {
         throw new Error(payload.message || "حدث خطأ غير متوقع.");
@@ -98,6 +105,27 @@ function renderActivity(activity) {
     `).join("") : `<div class="empty-state">لا توجد عمليات مسجلة لهذا الكود.</div>`;
 }
 
+function renderContactSubmissions() {
+    if (!adminState.contactSubmissions.length) {
+        dashboardElements.contactSubmissions.innerHTML = `<div class="empty-state">لا توجد اقتراحات جديدة حتى الآن.</div>`;
+        return;
+    }
+
+    dashboardElements.contactSubmissions.innerHTML = adminState.contactSubmissions.map((submission) => `
+        <article class="code-card">
+            <div class="work-topline">
+                <div>
+                    <strong>${escapeHtml(submission.name || "زائر الموقع")}</strong>
+                    <div class="work-meta">${escapeHtml(submission.email)}</div>
+                </div>
+                <span class="mini-badge">${escapeHtml(submission.status || "new")}</span>
+            </div>
+            <p class="work-prompt">${escapeHtml(submission.message)}</p>
+            <div class="work-meta">${new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(submission.createdAt))}</div>
+        </article>
+    `).join("");
+}
+
 async function loadSession() {
     if (!adminState.token) {
         window.location.href = "/admin/login";
@@ -117,6 +145,12 @@ async function loadCodes() {
     const response = await adminApi("/api/admin/codes");
     adminState.codes = response.data.codes;
     renderCodes();
+}
+
+async function loadContactSubmissions() {
+    const response = await adminApi("/api/admin/contact-submissions");
+    adminState.contactSubmissions = response.data.contactSubmissions || [];
+    renderContactSubmissions();
 }
 
 dashboardElements.form.addEventListener("submit", async (event) => {
@@ -193,6 +227,7 @@ dashboardElements.codesGrid.addEventListener("click", async (event) => {
 dashboardElements.refreshButton.addEventListener("click", async () => {
     try {
         await loadCodes();
+        await loadContactSubmissions();
     } catch (error) {
         setDashboardMessage(error.message, "error");
     }
@@ -215,4 +250,5 @@ dashboardElements.logoutButton.addEventListener("click", async () => {
 (async () => {
     await loadSession();
     await loadCodes();
+    await loadContactSubmissions();
 })();
