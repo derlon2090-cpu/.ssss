@@ -74,7 +74,7 @@ lookupForm.addEventListener("submit", async (event) => {
             body: JSON.stringify({ code })
         });
         sessionStorage.setItem("activeCreditsCode", code.toUpperCase());
-        window.location.href = `/studio.html?code=${encodeURIComponent(code.toUpperCase())}`;
+        window.location.href = `studio.html?code=${encodeURIComponent(code.toUpperCase())}`;
     } catch (error) {
         setLookupMessage(error.message, "error");
     }
@@ -94,7 +94,7 @@ homeAdminLogin.addEventListener("submit", async (event) => {
             })
         });
         localStorage.setItem("creditsAdminToken", response.data.token);
-        window.location.href = "/admin-dashboard.html";
+        window.location.href = "admin-dashboard.html";
     } catch (error) {
         setAdminMessage(error.message, "error");
     }

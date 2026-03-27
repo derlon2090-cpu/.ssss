@@ -130,14 +130,14 @@ function renderActivity() {
 async function loadLibrary() {
     libraryState.code = getCodeFromLocation();
     if (!libraryState.code) {
-        window.location.href = "/index.html";
+        window.location.href = "index.html";
         return;
     }
 
     sessionStorage.setItem("activeCreditsCode", libraryState.code);
-    libraryElements.backToStudio.href = `/studio.html?code=${encodeURIComponent(libraryState.code)}`;
+    libraryElements.backToStudio.href = `studio.html?code=${encodeURIComponent(libraryState.code)}`;
     if (libraryElements.backToStudioTop) {
-        libraryElements.backToStudioTop.href = `/studio.html?code=${encodeURIComponent(libraryState.code)}`;
+        libraryElements.backToStudioTop.href = `studio.html?code=${encodeURIComponent(libraryState.code)}`;
     }
     const [lookupResponse, activityResponse] = await Promise.all([
         libraryApi("/api/codes/lookup", {

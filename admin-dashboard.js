@@ -105,7 +105,7 @@ function renderActivity(activity) {
 
 async function loadSession() {
     if (!adminState.token) {
-        window.location.href = "/admin-login.html";
+        window.location.href = "admin-login.html";
         return;
     }
 
@@ -114,7 +114,7 @@ async function loadSession() {
         dashboardElements.sessionLabel.textContent = `مسجل كـ ${response.data.username}`;
     } catch (error) {
         localStorage.removeItem(adminTokenKey);
-        window.location.href = "/admin-login.html";
+        window.location.href = "admin-login.html";
     }
 }
 
@@ -214,7 +214,7 @@ dashboardElements.logoutButton.addEventListener("click", async () => {
     }
 
     localStorage.removeItem(adminTokenKey);
-    window.location.href = "/admin-login.html";
+    window.location.href = "admin-login.html";
 });
 
 (async () => {

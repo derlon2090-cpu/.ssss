@@ -235,7 +235,7 @@ function renderLatest(work, intelligence) {
                 <p class="work-prompt">${escapeHtml(work.prompt)}</p>
                 <div class="work-actions">
                     <a class="card-button" href="${escapeHtml(work.fileUrl)}" target="_blank" rel="noreferrer">تحميل / عرض</a>
-                    <a class="card-button" href="/library.html?code=${encodeURIComponent(studioState.code)}">كل المكتبة</a>
+                    <a class="card-button" href="library.html?code=${encodeURIComponent(studioState.code)}">كل المكتبة</a>
                 </div>
             </div>
         </article>
@@ -293,12 +293,12 @@ function renderActivityPreview() {
 async function loadWorkspace() {
     studioState.code = getCodeFromLocation();
     if (!studioState.code) {
-        window.location.href = "/index.html";
+        window.location.href = "index.html";
         return;
     }
 
     sessionStorage.setItem("activeCreditsCode", studioState.code);
-    studioElements.libraryLink.href = `/library.html?code=${encodeURIComponent(studioState.code)}`;
+    studioElements.libraryLink.href = `library.html?code=${encodeURIComponent(studioState.code)}`;
     const [lookupResponse, activityResponse] = await Promise.all([
         studioApi("/api/codes/lookup", {
             method: "POST",
