@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "name": "credits-codes-studio",
+  "scripts": {
+    "start": "node ai.js"
+  }
+}

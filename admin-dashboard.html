@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الأدمن</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero hero-admin">
+            <div class="hero-copy">
+                <p class="eyebrow">Admin Dashboard</p>
+                <h1>إدارة الأكواد والخطط والأولويات</h1>
+                <p class="hero-text">أنشئ الأكواد، اضبط الباقات، وحدد الأولوية والقيود من لوحة إدارة مستقلة بالكامل.</p>
+            </div>
+            <div class="hero-note">
+                <span>Secure Entry</span>
+                <p id="admin-session-label">جارٍ التحقق من الجلسة...</p>
+                <div class="hero-actions top-gap">
+                    <a class="ghost-button inline-link" href="/">واجهة المستخدم</a>
+                    <button id="admin-logout" class="primary-button" type="button">تسجيل الخروج</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-grid admin-grid">
+            <section class="panel">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Create Code</p>
+                        <h2>إنشاء كود جديد</h2>
+                    </div>
+                </div>
+
+                <form id="admin-code-form" class="form-grid">
+                    <label>
+                        <span>اسم الكود</span>
+                        <input name="code" type="text" placeholder="VIP-2026-A1" required>
+                    </label>
+                    <label>
+                        <span>عنوان داخلي</span>
+                        <input name="name" type="text" placeholder="كود عميل فاخر" required>
+                    </label>
+                    <label>
+                        <span>اسم العميل</span>
+                        <input name="clientName" type="text" placeholder="اسم العميل">
+                    </label>
+                    <label>
+                        <span>اسم المنشئ</span>
+                        <input name="createdBy" type="text" placeholder="اسم المسؤول">
+                    </label>
+                    <label>
+                        <span>نوع الخطة</span>
+                        <select name="planType">
+                            <option value="trial">Trial</option>
+                            <option value="standard" selected>Standard</option>
+                            <option value="vip">VIP</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>أولوية المعالجة</span>
+                        <select name="processingPriority">
+                            <option value="low">منخفضة</option>
+                            <option value="normal" selected>عادية</option>
+                            <option value="high">عالية</option>
+                            <option value="vip">VIP</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>عدد الصور</span>
+                        <input name="maxImages" type="number" min="0" value="10" required>
+                    </label>
+                    <label>
+                        <span>عدد الفيديوهات</span>
+                        <input name="maxVideos" type="number" min="0" value="3" required>
+                    </label>
+                    <label>
+                        <span>تاريخ البداية</span>
+                        <input name="startsAt" type="datetime-local">
+                    </label>
+                    <label>
+                        <span>تاريخ الانتهاء</span>
+                        <input name="expiresAt" type="datetime-local">
+                    </label>
+
+                    <div class="full-span">
+                        <span class="label-title">المدد المسموحة للفيديو</span>
+                        <div class="duration-grid">
+                            <label class="pill-option"><input type="checkbox" name="allowedDurations" value="5" checked>5 ثواني</label>
+                            <label class="pill-option"><input type="checkbox" name="allowedDurations" value="10" checked>10 ثواني</label>
+                            <label class="pill-option"><input type="checkbox" name="allowedDurations" value="30">30 ثانية</label>
+                            <label class="pill-option"><input type="checkbox" name="allowedDurations" value="60">60 ثانية</label>
+                        </div>
+                    </div>
+
+                    <div class="full-span toggle-row">
+                        <label class="toggle-chip"><input name="allowRegenerate" type="checkbox" checked>يسمح بإعادة التوليد</label>
+                        <label class="toggle-chip"><input name="allowSave" type="checkbox" checked>يحفظ الأعمال داخل المكتبة</label>
+                        <label class="toggle-chip"><input name="isActive" type="checkbox" checked>الكود فعال</label>
+                    </div>
+
+                    <label class="full-span">
+                        <span>ملاحظات داخلية</span>
+                        <textarea name="internalNotes" rows="4" placeholder="ملاحظات خاصة بالأدمن فقط"></textarea>
+                    </label>
+
+                    <div class="full-span action-row">
+                        <button class="primary-button" type="submit">إنشاء الكود</button>
+                    </div>
+                </form>
+
+                <div id="admin-form-message" class="message"></div>
+            </section>
+
+            <section class="panel">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Codes</p>
+                        <h2>الأكواد الحالية</h2>
+                    </div>
+                    <button id="refresh-admin-codes" class="ghost-button" type="button">تحديث</button>
+                </div>
+
+                <div id="admin-codes-grid" class="codes-grid">
+                    <div class="empty-state">لا توجد أكواد حتى الآن.</div>
+                </div>
+
+                <div class="panel-subsection">
+                    <div class="section-head">
+                        <div>
+                            <p class="section-kicker">Activity</p>
+                            <h3>سجل الكود المحدد</h3>
+                        </div>
+                    </div>
+                    <div id="admin-activity" class="timeline-list">
+                        <div class="empty-state">اختر كودًا لعرض سجل عملياته.</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/admin/dashboard.js"></script>
+</body>
+</html>

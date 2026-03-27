@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Credits Studio</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero hero-user">
+            <div class="hero-copy">
+                <p class="eyebrow">Smart Credits Studio</p>
+                <h1>ادخل الكود ثم انتقل مباشرة إلى مساحة الإنشاء</h1>
+                <p class="hero-text">
+                    الواجهة الآن مقسمة بوضوح: صفحة تحقق من الكود، ثم مساحة إنشاء مستقلة، ثم مكتبة وسجل عمليات منفصلان.
+                </p>
+            </div>
+            <div class="hero-note">
+                <span>Clear Flow</span>
+                <p>الخطوات: تحقق من الكود، أنشئ صورة أو فيديو، ثم راجع كل الأعمال وسجل العمليات من صفحة المكتبة.</p>
+            </div>
+        </header>
+
+        <section class="panel compact-panel home-entry">
+            <div class="section-head">
+                <div>
+                    <p class="section-kicker">Step 1</p>
+                    <h2>إدخال الكود</h2>
+                </div>
+            </div>
+
+            <form id="lookup-form" class="lookup-row">
+                <input id="lookup-code" name="code" type="text" placeholder="أدخل الكود هنا" required>
+                <button class="primary-button" type="submit">التحقق والانتقال</button>
+            </form>
+
+            <div id="lookup-message" class="message"></div>
+        </section>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

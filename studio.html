@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساحة الإنشاء</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Smart Credits Studio</p>
+                <h1 class="topbar-title">منصة إنشاء الصور والفيديو بالكود</h1>
+            </div>
+            <div class="topbar-actions">
+                <div id="header-code-badge" class="topbar-code"></div>
+                <a class="ghost-button inline-link" href="/">تغيير الكود</a>
+                <button id="open-admin-panel" class="primary-button" type="button">دخول الأدمن</button>
+            </div>
+        </header>
+
+        <main class="stack-layout">
+            <section class="panel compact-panel">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">لوحة الاستخدام</p>
+                        <h2>حالة الكود والرصيد الحالي</h2>
+                    </div>
+                    <button id="refresh-workspace" class="ghost-button" type="button">تحديث</button>
+                </div>
+                <div id="code-summary" class="summary-card"></div>
+                <div id="studio-message" class="message"></div>
+            </section>
+
+            <section class="workspace-grid">
+                <section class="panel">
+                    <div class="section-head">
+                        <div>
+                            <p class="section-kicker">إنشاء المحتوى</p>
+                            <h2>اكتب وصفك وخذ النتيجة</h2>
+                        </div>
+                    </div>
+
+                    <form id="generate-form" class="generate-form">
+                        <label class="full-span">
+                            <span>الوصف</span>
+                            <textarea id="prompt-input" name="prompt" rows="5" placeholder="مثال: سيارة سوداء في شارع ليلي مع أجواء سينمائية" required></textarea>
+                        </label>
+
+                        <label>
+                            <span>نوع المحتوى</span>
+                            <select id="content-type" name="type">
+                                <option value="image">صورة</option>
+                                <option value="video">فيديو</option>
+                            </select>
+                        </label>
+
+                        <div id="duration-group" class="duration-field">
+                            <span class="label-title">مدة الفيديو</span>
+                            <div id="duration-options" class="duration-chip-grid"></div>
+                            <input id="duration-value" name="duration" type="hidden" value="5">
+                        </div>
+
+                        <div class="full-span action-row">
+                            <button id="generate-button" class="primary-button" type="submit">إنشاء صورة</button>
+                            <button id="analyze-button" class="ghost-button" type="button">✨ تحسين الوصف</button>
+                        </div>
+                    </form>
+
+                    <div class="panel-subsection">
+                        <div class="chip-row templates-row">
+                            <button class="suggestion-chip" type="button" data-template="إعلان منتج فاخر بإضاءة ناعمة وخلفية نظيفة">إعلان منتج</button>
+                            <button class="suggestion-chip" type="button" data-template="بورتريه احترافي بإضاءة سينمائية وخلفية ضبابية">بورتريه</button>
+                            <button class="suggestion-chip" type="button" data-template="مشهد سينمائي في شارع ليلي مع انعكاسات مطر">مشهد سينمائي</button>
+                            <button class="suggestion-chip" type="button" data-template="فيديو قصير لمنتج يتحرك ببطء مع لقطة قريبة">فيديو قصير</button>
+                        </div>
+                        <div id="assistant-output" class="assistant-output">
+                            <div class="empty-state">اضغط "تحسين الوصف" للحصول على Prompt Enhancement وتحليل ذكي قبل الإنشاء.</div>
+                        </div>
+                    </div>
+
+                    <div id="latest-result" class="latest-result hidden"></div>
+                </section>
+
+                <section class="panel">
+                    <div class="section-head">
+                        <div>
+                            <p class="section-kicker">مكتبة الأعمال</p>
+                            <h2>الأعمال الأخيرة</h2>
+                        </div>
+                        <a id="library-link" class="ghost-button inline-link" href="/library">كل المكتبة</a>
+                    </div>
+
+                    <div class="chip-row">
+                        <button class="filter-chip active" type="button" data-work-filter="all">الكل</button>
+                        <button class="filter-chip" type="button" data-work-filter="image">صور</button>
+                        <button class="filter-chip" type="button" data-work-filter="video">فيديو</button>
+                    </div>
+
+                    <div id="works-grid" class="works-grid compact-works">
+                        <div class="empty-state">لا توجد أعمال محفوظة بعد.</div>
+                    </div>
+                </section>
+            </section>
+
+            <section id="activity-panel" class="panel hidden">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">السجل</p>
+                        <h2>آخر العمليات</h2>
+                    </div>
+                </div>
+                <div id="activity-preview" class="timeline-list">
+                    <div class="empty-state">لا توجد عمليات مسجلة بعد.</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="admin-overlay" class="admin-overlay hidden">
+        <div class="admin-overlay-backdrop" data-close-admin="true"></div>
+        <aside class="admin-drawer">
+            <div class="admin-drawer-head">
+                <div>
+                    <p class="section-kicker">لوحة التحكم</p>
+                    <h2>إدارة الأدمن</h2>
+                </div>
+                <button id="close-admin-panel" class="ghost-button" type="button">إغلاق</button>
+            </div>
+
+            <div id="admin-auth-view">
+                <p class="helper-text">اللوحة لا تظهر للمستخدم. ادخل ببيانات الأدمن لفتحها.</p>
+                <form id="admin-inline-login" class="form-grid single-column">
+                    <label>
+                        <span>اسم المستخدم</span>
+                        <input name="username" type="text" placeholder="admin" required>
+                    </label>
+                    <label>
+                        <span>كلمة المرور</span>
+                        <input name="password" type="password" placeholder="••••••••" required>
+                    </label>
+                    <label>
+                        <span>كود الأمان</span>
+                        <input name="securityCode" type="text" placeholder="اختياري">
+                    </label>
+                    <button class="primary-button" type="submit">دخول الأدمن</button>
+                </form>
+                <div id="admin-inline-message" class="message"></div>
+            </div>
+
+            <div id="admin-dashboard-inline" class="hidden">
+                <div class="admin-quick-stats">
+                    <div class="insight-card"><span class="insight-label">الأكواد النشطة</span><strong id="admin-active-codes">0</strong></div>
+                    <div class="insight-card"><span class="insight-label">إجمالي الصور</span><strong id="admin-total-images">0</strong></div>
+                    <div class="insight-card"><span class="insight-label">إجمالي الفيديوهات</span><strong id="admin-total-videos">0</strong></div>
+                </div>
+
+                <div class="admin-tabs">
+                    <button class="filter-chip active" type="button" data-admin-tab="codes">الأكواد</button>
+                    <button class="filter-chip" type="button" data-admin-tab="create">إنشاء كود</button>
+                    <button class="filter-chip" type="button" data-admin-tab="credits">الرصيد والصلاحيات</button>
+                    <button class="filter-chip" type="button" data-admin-tab="log">السجل</button>
+                    <button class="filter-chip" type="button" data-admin-tab="settings">الإعدادات</button>
+                </div>
+
+                <div id="admin-inline-message-live" class="message"></div>
+
+                <section class="admin-tab-pane" data-admin-pane="codes">
+                    <div class="chip-row admin-toolbar">
+                        <input id="admin-search" class="admin-search" type="text" placeholder="ابحث عن كود">
+                        <button class="filter-chip active" type="button" data-admin-filter="all">الكل</button>
+                        <button class="filter-chip" type="button" data-admin-filter="active">نشط</button>
+                        <button class="filter-chip" type="button" data-admin-filter="expired">منتهي</button>
+                        <button class="filter-chip" type="button" data-admin-filter="vip">VIP</button>
+                    </div>
+                    <div id="admin-inline-codes" class="codes-grid"></div>
+                </section>
+
+                <section class="admin-tab-pane hidden" data-admin-pane="create">
+                    <form id="admin-inline-create-form" class="form-grid single-column">
+                        <label><span>اسم الكود</span><input name="code" type="text" required></label>
+                        <label><span>عنوان داخلي</span><input name="name" type="text" required></label>
+                        <label><span>اسم العميل</span><input name="clientName" type="text"></label>
+                        <label><span>نوع الخطة</span><select name="planType"><option value="trial">Trial</option><option value="standard" selected>Standard</option><option value="vip">VIP</option></select></label>
+                        <label><span>أولوية المعالجة</span><select name="processingPriority"><option value="low">منخفضة</option><option value="normal" selected>عادية</option><option value="high">عالية</option><option value="vip">VIP</option></select></label>
+                        <label><span>عدد الصور</span><input name="maxImages" type="number" min="0" value="10" required></label>
+                        <label><span>عدد الفيديوهات</span><input name="maxVideos" type="number" min="0" value="3" required></label>
+                        <div class="duration-grid">
+                            <label class="pill-option"><input type="checkbox" name="allowedDurations" value="5" checked>5 ثواني</label>
+                            <label class="pill-option"><input type="checkbox" name="allowedDurations" value="10" checked>10 ثواني</label>
+                            <label class="pill-option"><input type="checkbox" name="allowedDurations" value="30">30 ثانية</label>
+                            <label class="pill-option"><input type="checkbox" name="allowedDurations" value="60">60 ثانية</label>
+                        </div>
+                        <div class="toggle-row">
+                            <label class="toggle-chip"><input name="allowRegenerate" type="checkbox" checked>إعادة التوليد</label>
+                            <label class="toggle-chip"><input name="allowSave" type="checkbox" checked>حفظ الأعمال</label>
+                            <label class="toggle-chip"><input name="isActive" type="checkbox" checked>فعال</label>
+                        </div>
+                        <button class="primary-button" type="submit">إنشاء الكود</button>
+                    </form>
+                </section>
+
+                <section class="admin-tab-pane hidden" data-admin-pane="credits">
+                    <div id="admin-selected-code" class="empty-state">اختر كودًا من تبويب الأكواد لعرض الرصيد والصلاحيات.</div>
+                </section>
+
+                <section class="admin-tab-pane hidden" data-admin-pane="log">
+                    <div id="admin-inline-activity" class="timeline-list">
+                        <div class="empty-state">اختر كودًا لعرض السجل.</div>
+                    </div>
+                </section>
+
+                <section class="admin-tab-pane hidden" data-admin-pane="settings">
+                    <div class="enhanced-box">
+                        <span class="insight-label">جلسة الأدمن</span>
+                        <p>اللوحة محفوظة داخل المتصفح الحالي فقط، ويمكنك تسجيل الخروج في أي وقت.</p>
+                        <button id="admin-inline-logout" class="ghost-button" type="button">تسجيل الخروج</button>
+                    </div>
+                </section>
+            </div>
+        </aside>
+    </div>
+
+    <script src="/studio.js"></script>
+</body>
+</html>

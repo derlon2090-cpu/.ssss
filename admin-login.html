@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دخول الأدمن</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="auth-shell">
+        <section class="panel auth-panel">
+            <p class="section-kicker">Admin Access</p>
+            <h1>دخول لوحة الأدمن</h1>
+            <p class="hero-text">ادخل ببيانات الإدارة للوصول إلى لوحة إنشاء الأكواد وإدارتها.</p>
+
+            <form id="admin-login-form" class="form-grid single-column">
+                <label>
+                    <span>اسم المستخدم</span>
+                    <input name="username" type="text" placeholder="admin" required>
+                </label>
+                <label>
+                    <span>كلمة المرور</span>
+                    <input name="password" type="password" placeholder="••••••••" required>
+                </label>
+                <label>
+                    <span>كود الأمان الإضافي</span>
+                    <input name="securityCode" type="text" placeholder="اختياري إذا تم تفعيله">
+                </label>
+                <div class="action-row">
+                    <button class="primary-button" type="submit">دخول</button>
+                    <a class="ghost-button inline-link" href="/">العودة لواجهة المستخدم</a>
+                </div>
+            </form>
+
+            <div id="login-message" class="message"></div>
+            <p class="helper-text">افتراضيًا في النسخة الحالية: <strong>admin / admin123</strong> ما لم تغيّرها من متغيرات البيئة.</p>
+        </section>
+    </div>
+
+    <script src="/admin/login.js"></script>
+</body>
+</html>

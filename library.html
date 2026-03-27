@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مكتبة الكود</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero hero-user">
+            <div class="hero-copy">
+                <p class="eyebrow">Library</p>
+                <h1>كل الأعمال وسجل العمليات في صفحة مستقلة</h1>
+                <p class="hero-text">اعرض الصور والفيديوهات، فلتر النتائج، وراجع كل عمليات الكود من الإنشاء إلى التوليد.</p>
+                <div class="hero-actions">
+                    <a id="back-to-studio" class="primary-button inline-link" href="/studio">العودة إلى الإنشاء</a>
+                    <a class="ghost-button inline-link" href="/">تغيير الكود</a>
+                </div>
+            </div>
+            <div class="hero-note">
+                <span>Code Library</span>
+                <p id="library-badge-text">جارٍ تحميل بيانات الكود...</p>
+            </div>
+        </header>
+
+        <main class="workspace-grid library-layout">
+            <section class="panel">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Assets</p>
+                        <h2>مكتبة الأعمال</h2>
+                    </div>
+                    <button id="refresh-library" class="ghost-button" type="button">تحديث</button>
+                </div>
+                <div class="chip-row">
+                    <button class="filter-chip active" type="button" data-filter="all">الكل</button>
+                    <button class="filter-chip" type="button" data-filter="image">صور</button>
+                    <button class="filter-chip" type="button" data-filter="video">فيديو</button>
+                </div>
+                <div id="library-message" class="message"></div>
+                <div id="library-works" class="works-grid">
+                    <div class="empty-state">جارٍ تحميل المكتبة...</div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Activity</p>
+                        <h2>سجل العمليات</h2>
+                    </div>
+                </div>
+                <div id="library-summary" class="summary-card"></div>
+                <div id="activity-list" class="timeline-list">
+                    <div class="empty-state">جارٍ تحميل السجل...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/library.js"></script>
+</body>
+</html>
