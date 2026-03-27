@@ -24,7 +24,7 @@
             <section class="panel compact-panel">
                 <div class="section-head">
                     <div>
-                        <p class="section-kicker">لوحة الكود</p>
+                        <p class="section-kicker">بطاقة الكود</p>
                         <h2>حالة الكود والرصيد المتبقي</h2>
                     </div>
                     <button id="refresh-workspace" class="ghost-button" type="button">تحديث</button>
@@ -45,7 +45,7 @@
                     <form id="generate-form" class="generate-form">
                         <label class="full-span">
                             <span>الوصف</span>
-                            <textarea id="prompt-input" name="prompt" rows="5" placeholder="مثال: سيارة سوداء في شارع ليلي مع أجواء سينمائية وإضاءة نيون" required></textarea>
+                            <textarea id="prompt-input" name="prompt" rows="5" placeholder="مثال: رجل أعمال في سيارة فخمة ليل بإضاءة سينمائية وانعكاسات واقعية" required></textarea>
                         </label>
 
                         <label>
@@ -61,6 +61,59 @@
                             <div id="duration-options" class="duration-chip-grid"></div>
                             <input id="duration-value" name="duration" type="hidden" value="5">
                         </div>
+
+                        <section class="full-span creation-controls">
+                            <div class="control-block">
+                                <div class="control-block-head">
+                                    <span class="label-title">الوقت</span>
+                                    <span class="helper-text">يؤثر على الإضاءة والمشهد النهائي</span>
+                                </div>
+                                <div class="toggle-group" role="group" aria-label="الوقت">
+                                    <button class="toggle-segment active" type="button" data-control-group="timeOfDay" data-control-value="auto">تلقائي</button>
+                                    <button class="toggle-segment" type="button" data-control-group="timeOfDay" data-control-value="day">نهار</button>
+                                    <button class="toggle-segment" type="button" data-control-group="timeOfDay" data-control-value="night">ليل</button>
+                                </div>
+                            </div>
+
+                            <div class="control-block">
+                                <div class="control-block-head">
+                                    <span class="label-title">الستايل</span>
+                                    <span class="helper-text">حدد شكل الإخراج من البداية</span>
+                                </div>
+                                <div class="toggle-group" role="group" aria-label="الستايل">
+                                    <button class="toggle-segment active" type="button" data-control-group="visualStyle" data-control-value="realistic">واقعي</button>
+                                    <button class="toggle-segment" type="button" data-control-group="visualStyle" data-control-value="cinematic">سينمائي</button>
+                                    <button class="toggle-segment" type="button" data-control-group="visualStyle" data-control-value="commercial">إعلاني</button>
+                                    <button class="toggle-segment" type="button" data-control-group="visualStyle" data-control-value="anime">أنمي</button>
+                                </div>
+                            </div>
+
+                            <div class="control-block control-grid-two">
+                                <div>
+                                    <div class="control-block-head">
+                                        <span class="label-title">زاوية التصوير</span>
+                                        <span class="helper-text">تؤثر على التكوين والتركيز</span>
+                                    </div>
+                                    <div class="toggle-group" role="group" aria-label="زاوية التصوير">
+                                        <button class="toggle-segment" type="button" data-control-group="cameraAnglePreset" data-control-value="close">قريبة</button>
+                                        <button class="toggle-segment active" type="button" data-control-group="cameraAnglePreset" data-control-value="medium">متوسطة</button>
+                                        <button class="toggle-segment" type="button" data-control-group="cameraAnglePreset" data-control-value="wide">واسعة</button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="control-block-head">
+                                        <span class="label-title">الجودة</span>
+                                        <span class="helper-text">مستوى الإخراج والتصدير</span>
+                                    </div>
+                                    <div class="toggle-group" role="group" aria-label="الجودة">
+                                        <button class="toggle-segment" type="button" data-control-group="outputQuality" data-control-value="normal">عادية</button>
+                                        <button class="toggle-segment active" type="button" data-control-group="outputQuality" data-control-value="high">عالية</button>
+                                        <button class="toggle-segment" type="button" data-control-group="outputQuality" data-control-value="ultra">فائقة</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
 
                         <div class="full-span create-balance-panel">
                             <div>
@@ -82,7 +135,7 @@
                             <button class="suggestion-chip" type="button" data-template="فيديو قصير لمنتج يتحرك ببطء مع لقطة قريبة وإضاءة فاخرة">فيديو قصير</button>
                         </div>
                         <div id="assistant-output" class="assistant-output">
-                            <div class="empty-state">اضغط "تحسين الوصف" للحصول على تحسين ذكي واقتراح ستايل وكلمات مفتاحية قبل الإنشاء.</div>
+                            <div class="empty-state">اضغط "تحسين الوصف" ليحوّل النظام النص إلى Prompt أوضح، ويستخرج الوقت والكلمات المفتاحية والمزاج والستايل قبل الإنشاء.</div>
                         </div>
                     </div>
 
@@ -137,7 +190,7 @@
 
             <div id="admin-auth-view">
                 <div class="admin-zone-note">
-                    <span class="insight-label">وصول الأدمن</span>
+                    <span class="insight-label">وصول آمن</span>
                     <p>هذه المنطقة لا تظهر للمستخدم، ويتم فتحها فقط عند الضغط على زر دخول الأدمن.</p>
                 </div>
                 <form id="admin-inline-login" class="form-grid single-column">
@@ -153,7 +206,7 @@
                         <span>كود الأمان</span>
                         <input name="securityCode" type="text" placeholder="اختياري">
                     </label>
-                    <button class="primary-button" type="submit">دخول الأدمن</button>
+                    <button class="primary-button" type="submit">الدخول إلى لوحة التحكم</button>
                 </form>
                 <div id="admin-inline-message" class="message"></div>
             </div>

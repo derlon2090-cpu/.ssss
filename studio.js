@@ -1,5 +1,29 @@
 const adminTokenKey = "creditsAdminToken";
 
+const controlLabels = {
+    timeOfDay: {
+        auto: "تلقائي",
+        day: "نهار",
+        night: "ليل"
+    },
+    visualStyle: {
+        realistic: "واقعي",
+        cinematic: "سينمائي",
+        commercial: "إعلاني",
+        anime: "أنمي"
+    },
+    cameraAnglePreset: {
+        close: "قريبة",
+        medium: "متوسطة",
+        wide: "واسعة"
+    },
+    outputQuality: {
+        normal: "عادية",
+        high: "عالية",
+        ultra: "فائقة"
+    }
+};
+
 const studioState = {
     code: null,
     meta: null,
@@ -10,7 +34,15 @@ const studioState = {
     adminCodes: [],
     adminFilter: "all",
     adminSearch: "",
-    selectedAdminCode: null
+    selectedAdminCode: null,
+    controls: {
+        timeOfDay: "auto",
+        visualStyle: "realistic",
+        cameraAnglePreset: "medium",
+        outputQuality: "high"
+    },
+    lastPayload: null,
+    lastIntelligence: null
 };
 
 const studioElements = {
@@ -35,6 +67,7 @@ const studioElements = {
     activityPanel: document.getElementById("activity-panel"),
     activityPreview: document.getElementById("activity-preview"),
     suggestionButtons: [...document.querySelectorAll("[data-template]")],
+    controlSegments: [...document.querySelectorAll("[data-control-group]")],
     openAdmin: document.getElementById("open-admin-panel"),
     closeAdmin: document.getElementById("close-admin-panel"),
     adminOverlay: document.getElementById("admin-overlay"),
@@ -71,7 +104,7 @@ function setAdminMessage(text, type = "info", inline = false) {
 }
 
 function escapeHtml(value) {
-    return String(value)
+    return String(value ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -103,7 +136,7 @@ async function studioApi(url, options = {}) {
     return payload;
 }
 
-async function adminApi(url, options = {}) {
+function adminApi(url, options = {}) {
     return studioApi(url, {
         headers: {
             Authorization: `Bearer ${studioState.adminToken}`
@@ -129,25 +162,51 @@ function formatDate(value) {
     }).format(new Date(value));
 }
 
+function getLabel(group, value) {
+    return controlLabels[group]?.[value] || value || "-";
+}
+
+function humanStatus(status) {
+    const labels = {
+        active: "فعال",
+        inactive: "موقوف",
+        expired: "منتهي",
+        scheduled: "مجدول",
+        consumed: "مستهلك"
+    };
+    return labels[status] || status || "-";
+}
+
+function humanPriority(priority) {
+    const labels = {
+        low: "منخفضة",
+        normal: "عادية",
+        high: "عالية",
+        vip: "VIP"
+    };
+    return labels[priority] || priority || "-";
+}
+
 function renderCreateBalance(code) {
     studioElements.createBalance.innerHTML = `
         <strong>${code.remainingImages}</strong> صورة متبقية
         <span class="balance-divider">|</span>
-        <strong>${code.remainingVideos}</strong> فيديو متبقي
+        <strong>${code.remainingVideos}</strong> فيديو متبقٍ
     `;
 }
 
 function renderSummary(code) {
+    const badgeName = code.clientName || code.name || code.badgeLabel;
     studioElements.headerCodeBadge.innerHTML = `
         <strong>${escapeHtml(code.code)}</strong>
-        <span>${escapeHtml(code.clientName || code.badgeLabel)}</span>
+        <span>${escapeHtml(badgeName)}</span>
     `;
     renderCreateBalance(code);
     studioElements.codeSummary.innerHTML = `
         <div class="summary-headline">
             <div>
                 <h3>${escapeHtml(code.name)}</h3>
-                <p class="summary-meta">${escapeHtml(code.badgeLabel)} | ${escapeHtml(code.status)} | أولوية ${escapeHtml(code.processingPriority)}</p>
+                <p class="summary-meta">${escapeHtml(code.badgeLabel)} | ${humanStatus(code.status)} | أولوية ${humanPriority(code.processingPriority)}</p>
             </div>
             <span class="mini-badge">${escapeHtml(code.remainingImages + code.remainingVideos)} رصيد</span>
         </div>
@@ -182,69 +241,136 @@ function updateMode() {
     studioElements.generateButton.textContent = isVideo ? "إنشاء فيديو" : "إنشاء صورة";
 }
 
+function updateControlSegments() {
+    studioElements.controlSegments.forEach((button) => {
+        const group = button.dataset.controlGroup;
+        const value = button.dataset.controlValue;
+        button.classList.toggle("active", studioState.controls[group] === value);
+    });
+}
+
+function buildControlsPayload(overrides = {}) {
+    return {
+        timeOfDay: overrides.timeOfDay || studioState.controls.timeOfDay,
+        visualStyle: overrides.visualStyle || studioState.controls.visualStyle,
+        cameraAnglePreset: overrides.cameraAnglePreset || studioState.controls.cameraAnglePreset,
+        outputQuality: overrides.outputQuality || studioState.controls.outputQuality
+    };
+}
+
+function buildGenerationPayload(overrides = {}) {
+    const payload = {
+        code: studioState.code,
+        prompt: typeof overrides.prompt === "string" ? overrides.prompt : studioElements.prompt.value.trim(),
+        type: overrides.type || studioElements.type.value,
+        ...buildControlsPayload(overrides)
+    };
+
+    if (payload.type === "video") {
+        payload.duration = Number(overrides.duration || studioElements.durationValue.value);
+    }
+
+    return payload;
+}
+
 function renderAssistant(data) {
+    const keywords = Array.isArray(data.keywords) && data.keywords.length ? data.keywords : ["-"];
+    const styles = Array.isArray(data.suggestedStyles) && data.suggestedStyles.length ? data.suggestedStyles : ["-"];
+    const notes = Array.isArray(data.notes) && data.notes.length ? data.notes : ["لا توجد ملاحظات إضافية."];
+
     studioElements.assistant.innerHTML = `
         <div class="insights-grid">
             <div class="insight-card">
-                <span class="insight-label">تحسين الوصف</span>
-                <strong>${escapeHtml(data.qualityLevel)}</strong>
-                <p>${escapeHtml(data.notes.join(" | "))}</p>
+                <span class="insight-label">فهم النص</span>
+                <strong>${escapeHtml(data.subject || "المشهد الرئيسي")}</strong>
+                <p>${escapeHtml(data.environment || "بيئة غير محددة بعد")} | ${escapeHtml(data.mood || "-")}</p>
             </div>
             <div class="insight-card">
-                <span class="insight-label">الستايل والكلمات</span>
-                <strong>${escapeHtml(data.suggestedStyles.join(" / "))}</strong>
-                <p>${escapeHtml(data.keywords.join(" / "))}</p>
+                <span class="insight-label">الوقت والستايل</span>
+                <strong>${escapeHtml(data.timeOfDayLabel || "-")} | ${escapeHtml(data.styleLabel || styles[0])}</strong>
+                <p>${escapeHtml(data.lighting || "-")} | ${escapeHtml(data.cameraAngleLabel || data.cameraAngle || "-")}</p>
             </div>
         </div>
         <div class="insights-grid">
             <div class="insight-card">
-                <span class="insight-label">الجو العام</span>
-                <strong>${escapeHtml(data.mood)}</strong>
-                <p>${escapeHtml(data.lighting)} | ${escapeHtml(data.cameraAngle)}</p>
+                <span class="insight-label">الكلمات المفتاحية</span>
+                <strong>${escapeHtml(keywords.join(" / "))}</strong>
+                <p>${escapeHtml(styles.join(" / "))}</p>
             </div>
             <div class="insight-card">
-                <span class="insight-label">الإخراج</span>
-                <strong>${escapeHtml(data.aspectRatio)}</strong>
-                <p>${escapeHtml(data.motionHint)}</p>
+                <span class="insight-label">الإخراج النهائي</span>
+                <strong>${escapeHtml(data.qualityLabel || data.qualityLevel || "-")}</strong>
+                <p>${escapeHtml(data.aspectRatio || "-")} | ${escapeHtml(data.motionHint || "-")}</p>
             </div>
         </div>
         <div class="enhanced-box">
-            <span class="insight-label">الوصف المحسن</span>
-            <p>${escapeHtml(data.enhancedPrompt)}</p>
+            <span class="insight-label">الوصف الأصلي</span>
+            <p>${escapeHtml(data.originalPrompt || studioElements.prompt.value.trim())}</p>
         </div>
+        <div class="enhanced-box">
+            <span class="insight-label">الوصف المحسن</span>
+            <p>${escapeHtml(data.enhancedPrompt || "-")}</p>
+        </div>
+        <div class="enhanced-box">
+            <span class="insight-label">ملاحظات المساعد</span>
+            <p>${escapeHtml(notes.join(" | "))}</p>
+        </div>
+    `;
+}
+
+function buildResultActions(work) {
+    const regenerateButton = studioState.meta?.allowRegenerate ? `
+        <button class="card-button" type="button" data-result-action="regenerate">إعادة توليد</button>
+        <button class="card-button" type="button" data-result-action="highres">نسخة بجودة عالية</button>
+    ` : "";
+
+    return `
+        <a class="card-button" href="${escapeHtml(work.fileUrl)}" target="_blank" rel="noreferrer">تحميل / عرض</a>
+        <a class="card-button" href="library.html?code=${encodeURIComponent(studioState.code)}">مكتبة الأعمال</a>
+        <button class="card-button" type="button" data-result-action="saved">${work.saved ? "محفوظ في المكتبة" : "غير محفوظ"}</button>
+        ${regenerateButton}
     `;
 }
 
 function renderLatest(work, intelligence) {
     const typeLabel = work.type === "video" ? `فيديو ${work.duration || ""} ثانية` : "صورة";
+    const qualityLabel = work.qualityLabel || intelligence.qualityLabel || getLabel("outputQuality", work.outputQuality || "high");
+    const timeLabel = work.timeOfDayLabel || intelligence.timeOfDayLabel || "-";
+    const styleLabel = work.styleLabel || intelligence.styleLabel || "-";
+
     studioElements.latest.classList.remove("hidden");
     studioElements.latest.innerHTML = `
         <div class="section-head">
             <div>
                 <p class="section-kicker">النتيجة الأخيرة</p>
-                <h3>تم إنشاء العمل بنجاح</h3>
+                <h3>تم الإنشاء بنجاح</h3>
             </div>
         </div>
-        <article class="work-card">
-            <img src="${escapeHtml(work.previewUrl)}" alt="${escapeHtml(typeLabel)}">
-            <div class="work-content">
+        <article class="result-showcase">
+            <div class="result-preview-frame">
+                <img src="${escapeHtml(work.previewUrl)}" alt="${escapeHtml(typeLabel)}">
+            </div>
+            <div class="result-copy">
                 <div class="work-topline">
-                    <span class="mini-badge">${typeLabel}</span>
+                    <span class="mini-badge">${escapeHtml(typeLabel)}</span>
                     <span class="work-meta">${formatDate(work.createdAt)}</span>
                 </div>
-                <p class="work-prompt">${escapeHtml(work.prompt)}</p>
-                <div class="work-actions">
-                    <a class="card-button" href="${escapeHtml(work.fileUrl)}" target="_blank" rel="noreferrer">تحميل / عرض</a>
-                    <a class="card-button" href="library.html?code=${encodeURIComponent(studioState.code)}">كل المكتبة</a>
+                <p class="work-prompt">${escapeHtml(work.originalPrompt || work.prompt)}</p>
+                <div class="result-meta-grid">
+                    <div class="insight-card compact-card"><span class="insight-label">الوقت</span><strong>${escapeHtml(timeLabel)}</strong></div>
+                    <div class="insight-card compact-card"><span class="insight-label">الستايل</span><strong>${escapeHtml(styleLabel)}</strong></div>
+                    <div class="insight-card compact-card"><span class="insight-label">الجودة</span><strong>${escapeHtml(qualityLabel)}</strong></div>
+                    <div class="insight-card compact-card"><span class="insight-label">زاوية التصوير</span><strong>${escapeHtml(work.cameraAngleLabel || intelligence.cameraAngleLabel || "-")}</strong></div>
+                </div>
+                <div class="enhanced-box">
+                    <span class="insight-label">الوصف المحسن</span>
+                    <p>${escapeHtml(work.enhancedPrompt || intelligence.enhancedPrompt || "-")}</p>
+                </div>
+                <div class="work-actions result-actions">
+                    ${buildResultActions(work)}
                 </div>
             </div>
         </article>
-        <div class="assistant-output compact-output">
-            <div class="enhanced-box">
-                <span class="insight-label">المحرك الذكي استخدم</span>
-                <p>${escapeHtml(intelligence.enhancedPrompt)}</p>
-            </div>
-        </div>
     `;
 }
 
@@ -263,6 +389,11 @@ function renderWorks() {
                     <span class="work-meta">${formatDate(work.createdAt)}</span>
                 </div>
                 <p class="work-prompt">${escapeHtml(work.prompt)}</p>
+                <div class="summary-list work-insights-list">
+                    <span>الوقت: ${escapeHtml(work.timeOfDayLabel || "-")}</span>
+                    <span>الستايل: ${escapeHtml(work.styleLabel || "-")}</span>
+                    <span>الجودة: ${escapeHtml(work.qualityLabel || "-")}</span>
+                </div>
                 <div class="work-actions">
                     <a class="card-button" href="${escapeHtml(work.fileUrl)}" target="_blank" rel="noreferrer">فتح</a>
                 </div>
@@ -299,6 +430,7 @@ async function loadWorkspace() {
 
     sessionStorage.setItem("activeCreditsCode", studioState.code);
     studioElements.libraryLink.href = `library.html?code=${encodeURIComponent(studioState.code)}`;
+
     const [lookupResponse, activityResponse] = await Promise.all([
         studioApi("/api/codes/lookup", {
             method: "POST",
@@ -306,9 +438,11 @@ async function loadWorkspace() {
         }),
         studioApi(`/api/codes/${encodeURIComponent(studioState.code)}/activity`)
     ]);
+
     studioState.meta = lookupResponse.data.code;
     studioState.works = lookupResponse.data.works || [];
     studioState.activity = activityResponse.data.activity || [];
+
     renderSummary(studioState.meta);
     renderDurations(studioState.meta);
     renderWorks();
@@ -332,10 +466,11 @@ function renderAdminStats(codes) {
 
 function filteredAdminCodes() {
     return studioState.adminCodes.filter((code) => {
-        const matchesSearch = !studioState.adminSearch
-            || code.code.toLowerCase().includes(studioState.adminSearch)
-            || (code.name || "").toLowerCase().includes(studioState.adminSearch)
-            || (code.clientName || "").toLowerCase().includes(studioState.adminSearch);
+        const search = studioState.adminSearch;
+        const matchesSearch = !search
+            || code.code.toLowerCase().includes(search)
+            || (code.name || "").toLowerCase().includes(search)
+            || (code.clientName || "").toLowerCase().includes(search);
         const matchesFilter = studioState.adminFilter === "all"
             || (studioState.adminFilter === "vip" ? code.planType === "vip" : code.status === studioState.adminFilter);
         return matchesSearch && matchesFilter;
@@ -354,7 +489,7 @@ function renderAdminCodes() {
                 <span class="mini-badge">${escapeHtml(code.badgeLabel)}</span>
             </div>
             <div class="summary-list admin-code-list">
-                <span>الحالة: ${escapeHtml(code.status)}</span>
+                <span>الحالة: ${escapeHtml(humanStatus(code.status))}</span>
                 <span>العميل: ${escapeHtml(code.clientName || "-")}</span>
                 <span>صور: ${code.remainingImages} / ${code.maxImages}</span>
                 <span>فيديو: ${code.remainingVideos} / ${code.maxVideos}</span>
@@ -379,7 +514,7 @@ function renderAdminSelectedCode(detail) {
     studioElements.adminSelectedCode.innerHTML = `
         <div class="enhanced-box">
             <span class="insight-label">${escapeHtml(detail.code.code)}</span>
-            <p>${escapeHtml(detail.code.name)} | ${escapeHtml(detail.code.badgeLabel)} | ${escapeHtml(detail.code.processingPriority)}</p>
+            <p>${escapeHtml(detail.code.name)} | ${escapeHtml(detail.code.badgeLabel)} | ${escapeHtml(humanPriority(detail.code.processingPriority))}</p>
             <p>صور: ${detail.code.remainingImages}/${detail.code.maxImages} | فيديو: ${detail.code.remainingVideos}/${detail.code.maxVideos}</p>
             <p>مدد الفيديو: ${detail.code.allowedDurations.join(" / ") || "-"}</p>
             <p>${detail.code.allowSave ? "يحفظ الأعمال" : "بدون حفظ"} | ${detail.code.allowRegenerate ? "إعادة التوليد متاحة" : "إعادة التوليد معطلة"}</p>
@@ -436,6 +571,64 @@ async function loadAdminSessionIfAny() {
     }
 }
 
+function setBusyState(isBusy) {
+    studioElements.generateButton.disabled = isBusy;
+    studioElements.analyzeButton.disabled = isBusy;
+}
+
+async function analyzePrompt() {
+    const prompt = studioElements.prompt.value.trim();
+    if (!prompt) {
+        setStudioMessage("اكتب وصفًا أولًا.", "error");
+        return null;
+    }
+
+    const response = await studioApi("/api/prompt-intelligence/analyze", {
+        method: "POST",
+        body: JSON.stringify({
+            prompt,
+            type: studioElements.type.value,
+            ...buildControlsPayload()
+        })
+    });
+
+    studioState.lastIntelligence = response.data;
+    renderAssistant(response.data);
+    setStudioMessage("تم تحليل الوصف وتحسينه.", "success");
+    return response.data;
+}
+
+async function performGeneration(overrides = {}) {
+    const payload = buildGenerationPayload(overrides);
+
+    if (!payload.prompt) {
+        setStudioMessage("اكتب وصفًا أولًا.", "error");
+        return;
+    }
+
+    setBusyState(true);
+    setStudioMessage("جارٍ إنشاء النتيجة...", "info");
+
+    try {
+        const response = await studioApi("/api/content/generate", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+
+        studioState.lastPayload = payload;
+        studioState.lastIntelligence = response.data.intelligence;
+
+        await loadWorkspace();
+        renderAssistant(response.data.intelligence);
+        renderLatest(response.data.work, response.data.intelligence);
+        setStudioMessage(response.data.saved ? "تم إنشاء العمل وحفظه داخل المكتبة." : "تم إنشاء العمل.", "success");
+    } catch (error) {
+        setStudioMessage(error.message, "error");
+    } finally {
+        setBusyState(false);
+    }
+}
+
 studioElements.refresh.addEventListener("click", async () => {
     try {
         await loadWorkspace();
@@ -458,6 +651,13 @@ studioElements.durationOptions.addEventListener("click", (event) => {
     button.classList.add("active");
 });
 
+studioElements.controlSegments.forEach((button) => {
+    button.addEventListener("click", () => {
+        studioState.controls[button.dataset.controlGroup] = button.dataset.controlValue;
+        updateControlSegments();
+    });
+});
+
 studioElements.workFilters.forEach((button) => {
     button.addEventListener("click", () => {
         studioState.workFilter = button.dataset.workFilter;
@@ -474,52 +674,58 @@ studioElements.suggestionButtons.forEach((button) => {
 });
 
 studioElements.analyzeButton.addEventListener("click", async () => {
-    if (!studioElements.prompt.value.trim()) {
-        setStudioMessage("اكتب وصفًا أولًا.", "error");
-        return;
-    }
-
     try {
-        const response = await studioApi("/api/prompt-intelligence/analyze", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: studioElements.prompt.value,
-                type: studioElements.type.value
-            })
-        });
-        renderAssistant(response.data);
-        setStudioMessage("تم تحليل الوصف وتحسينه.", "success");
+        setBusyState(true);
+        await analyzePrompt();
     } catch (error) {
         setStudioMessage(error.message, "error");
+    } finally {
+        setBusyState(false);
     }
 });
 
 studioElements.form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    await performGeneration();
+});
 
-    try {
-        setStudioMessage("جارٍ إنشاء النتيجة...", "info");
-        const response = await studioApi("/api/content/generate", {
-            method: "POST",
-            body: JSON.stringify({
-                code: studioState.code,
-                prompt: studioElements.prompt.value,
-                type: studioElements.type.value,
-                duration: studioElements.type.value === "video" ? Number(studioElements.durationValue.value) : undefined
-            })
+studioElements.latest.addEventListener("click", async (event) => {
+    const actionButton = event.target.closest("[data-result-action]");
+    if (!actionButton) {
+        return;
+    }
+
+    const action = actionButton.dataset.resultAction;
+    if (action === "saved") {
+        window.location.href = `library.html?code=${encodeURIComponent(studioState.code)}`;
+        return;
+    }
+
+    if (!studioState.lastPayload) {
+        setStudioMessage("أنشئ نتيجة أولًا ثم أعد التوليد.", "error");
+        return;
+    }
+
+    if (action === "regenerate") {
+        await performGeneration(studioState.lastPayload);
+        return;
+    }
+
+    if (action === "highres") {
+        await performGeneration({
+            ...studioState.lastPayload,
+            outputQuality: "ultra"
         });
-        await loadWorkspace();
-        renderAssistant(response.data.intelligence);
-        renderLatest(response.data.work, response.data.intelligence);
-        setStudioMessage(response.data.saved ? "تم إنشاء العمل وحفظه داخل المكتبة." : "تم إنشاء العمل.", "success");
-    } catch (error) {
-        setStudioMessage(error.message, "error");
     }
 });
 
 studioElements.openAdmin.addEventListener("click", async () => {
     openAdminOverlay();
-    await loadAdminSessionIfAny();
+    try {
+        await loadAdminSessionIfAny();
+    } catch (error) {
+        setAdminMessage(error.message, "error", true);
+    }
 });
 
 studioElements.closeAdmin.addEventListener("click", closeAdminOverlay);
@@ -550,9 +756,7 @@ studioElements.adminInlineLogin.addEventListener("submit", async (event) => {
 });
 
 studioElements.adminTabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-        switchAdminTab(tab.dataset.adminTab);
-    });
+    tab.addEventListener("click", () => switchAdminTab(tab.dataset.adminTab));
 });
 
 studioElements.adminQuickCreate.addEventListener("click", () => {
@@ -653,6 +857,8 @@ studioElements.adminLogout.addEventListener("click", async () => {
     studioElements.adminAuthView.classList.remove("hidden");
     setAdminMessage("تم تسجيل الخروج.", "success", true);
 });
+
+updateControlSegments();
 
 (async () => {
     try {
