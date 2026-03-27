@@ -8,6 +8,7 @@ const libraryState = {
 
 const libraryElements = {
     backToStudio: document.getElementById("back-to-studio"),
+    backToStudioTop: document.getElementById("back-to-studio-top"),
     badgeText: document.getElementById("library-badge-text"),
     refresh: document.getElementById("refresh-library"),
     message: document.getElementById("library-message"),
@@ -130,6 +131,9 @@ async function loadLibrary() {
 
     sessionStorage.setItem("activeCreditsCode", libraryState.code);
     libraryElements.backToStudio.href = `/studio?code=${encodeURIComponent(libraryState.code)}`;
+    if (libraryElements.backToStudioTop) {
+        libraryElements.backToStudioTop.href = `/studio?code=${encodeURIComponent(libraryState.code)}`;
+    }
     const [lookupResponse, activityResponse] = await Promise.all([
         libraryApi("/api/codes/lookup", {
             method: "POST",

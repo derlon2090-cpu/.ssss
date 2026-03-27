@@ -650,6 +650,38 @@ th {
     background: rgba(16, 42, 67, 0.08);
 }
 
+.admin-entry-button {
+    min-width: 150px;
+}
+
+.create-balance-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px;
+    border: 1px solid rgba(16, 42, 67, 0.1);
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(247, 241, 232, 0.92));
+}
+
+.create-balance-copy {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    color: var(--bg-deep);
+    font-weight: 700;
+}
+
+.balance-divider {
+    color: rgba(16, 42, 67, 0.3);
+}
+
+.create-actions {
+    justify-content: flex-end;
+}
+
 .compact-works {
     grid-template-columns: 1fr;
 }
@@ -677,6 +709,32 @@ th {
     padding: 20px;
     background: #f7f1e8;
     box-shadow: -12px 0 40px rgba(10, 18, 28, 0.22);
+}
+
+.admin-kicker {
+    color: var(--danger);
+}
+
+.admin-zone-note {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(159, 45, 32, 0.12);
+    background: rgba(159, 45, 32, 0.06);
+}
+
+.admin-zone-note p {
+    margin: 8px 0 0;
+}
+
+.admin-zone-banner {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 16px;
+    border-radius: 24px;
+    border: 1px solid rgba(16, 42, 67, 0.1);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(245, 235, 223, 0.9));
 }
 
 .admin-drawer-head {
@@ -714,6 +772,10 @@ th {
 .admin-tab-pane {
     display: grid;
     gap: 14px;
+}
+
+.admin-code-list {
+    color: var(--muted) !important;
 }
 
 @media (max-width: 1080px) {
@@ -757,7 +819,8 @@ th {
     .lookup-row,
     .section-head,
     .results-head,
-    .action-row {
+    .action-row,
+    .create-balance-panel {
         flex-direction: column;
         align-items: stretch;
     }

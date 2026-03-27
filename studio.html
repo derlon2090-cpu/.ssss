@@ -16,7 +16,7 @@
             <div class="topbar-actions">
                 <div id="header-code-badge" class="topbar-code"></div>
                 <a class="ghost-button inline-link" href="/">تغيير الكود</a>
-                <button id="open-admin-panel" class="primary-button" type="button">دخول الأدمن</button>
+                <button id="open-admin-panel" class="primary-button admin-entry-button" type="button">دخول الأدمن</button>
             </div>
         </header>
 
@@ -24,8 +24,8 @@
             <section class="panel compact-panel">
                 <div class="section-head">
                     <div>
-                        <p class="section-kicker">لوحة الاستخدام</p>
-                        <h2>حالة الكود والرصيد الحالي</h2>
+                        <p class="section-kicker">لوحة الكود</p>
+                        <h2>حالة الكود والرصيد المتبقي</h2>
                     </div>
                     <button id="refresh-workspace" class="ghost-button" type="button">تحديث</button>
                 </div>
@@ -45,7 +45,7 @@
                     <form id="generate-form" class="generate-form">
                         <label class="full-span">
                             <span>الوصف</span>
-                            <textarea id="prompt-input" name="prompt" rows="5" placeholder="مثال: سيارة سوداء في شارع ليلي مع أجواء سينمائية" required></textarea>
+                            <textarea id="prompt-input" name="prompt" rows="5" placeholder="مثال: سيارة سوداء في شارع ليلي مع أجواء سينمائية وإضاءة نيون" required></textarea>
                         </label>
 
                         <label>
@@ -62,9 +62,15 @@
                             <input id="duration-value" name="duration" type="hidden" value="5">
                         </div>
 
-                        <div class="full-span action-row">
-                            <button id="generate-button" class="primary-button" type="submit">إنشاء صورة</button>
-                            <button id="analyze-button" class="ghost-button" type="button">✨ تحسين الوصف</button>
+                        <div class="full-span create-balance-panel">
+                            <div>
+                                <span class="insight-label">الرصيد المتبقي</span>
+                                <div id="create-balance" class="create-balance-copy"></div>
+                            </div>
+                            <div class="action-row create-actions">
+                                <button id="generate-button" class="primary-button" type="submit">إنشاء صورة</button>
+                                <button id="analyze-button" class="ghost-button" type="button">تحسين الوصف</button>
+                            </div>
                         </div>
                     </form>
 
@@ -72,11 +78,11 @@
                         <div class="chip-row templates-row">
                             <button class="suggestion-chip" type="button" data-template="إعلان منتج فاخر بإضاءة ناعمة وخلفية نظيفة">إعلان منتج</button>
                             <button class="suggestion-chip" type="button" data-template="بورتريه احترافي بإضاءة سينمائية وخلفية ضبابية">بورتريه</button>
-                            <button class="suggestion-chip" type="button" data-template="مشهد سينمائي في شارع ليلي مع انعكاسات مطر">مشهد سينمائي</button>
-                            <button class="suggestion-chip" type="button" data-template="فيديو قصير لمنتج يتحرك ببطء مع لقطة قريبة">فيديو قصير</button>
+                            <button class="suggestion-chip" type="button" data-template="مشهد سينمائي في شارع ليلي مع انعكاسات مطر وإضاءة نيون">مشهد سينمائي</button>
+                            <button class="suggestion-chip" type="button" data-template="فيديو قصير لمنتج يتحرك ببطء مع لقطة قريبة وإضاءة فاخرة">فيديو قصير</button>
                         </div>
                         <div id="assistant-output" class="assistant-output">
-                            <div class="empty-state">اضغط "تحسين الوصف" للحصول على Prompt Enhancement وتحليل ذكي قبل الإنشاء.</div>
+                            <div class="empty-state">اضغط "تحسين الوصف" للحصول على تحسين ذكي واقتراح ستايل وكلمات مفتاحية قبل الإنشاء.</div>
                         </div>
                     </div>
 
@@ -123,14 +129,17 @@
         <aside class="admin-drawer">
             <div class="admin-drawer-head">
                 <div>
-                    <p class="section-kicker">لوحة التحكم</p>
-                    <h2>إدارة الأدمن</h2>
+                    <p class="section-kicker admin-kicker">منطقة خاصة</p>
+                    <h2>لوحة التحكم</h2>
                 </div>
                 <button id="close-admin-panel" class="ghost-button" type="button">إغلاق</button>
             </div>
 
             <div id="admin-auth-view">
-                <p class="helper-text">اللوحة لا تظهر للمستخدم. ادخل ببيانات الأدمن لفتحها.</p>
+                <div class="admin-zone-note">
+                    <span class="insight-label">وصول الإدمن</span>
+                    <p>هذه المنطقة لا تظهر للمستخدم، ويتم فتحها فقط عند الضغط على زر دخول الأدمن.</p>
+                </div>
                 <form id="admin-inline-login" class="form-grid single-column">
                     <label>
                         <span>اسم المستخدم</span>
@@ -138,7 +147,7 @@
                     </label>
                     <label>
                         <span>كلمة المرور</span>
-                        <input name="password" type="password" placeholder="••••••••" required>
+                        <input name="password" type="password" placeholder="********" required>
                     </label>
                     <label>
                         <span>كود الأمان</span>
@@ -150,10 +159,13 @@
             </div>
 
             <div id="admin-dashboard-inline" class="hidden">
-                <div class="admin-quick-stats">
-                    <div class="insight-card"><span class="insight-label">الأكواد النشطة</span><strong id="admin-active-codes">0</strong></div>
-                    <div class="insight-card"><span class="insight-label">إجمالي الصور</span><strong id="admin-total-images">0</strong></div>
-                    <div class="insight-card"><span class="insight-label">إجمالي الفيديوهات</span><strong id="admin-total-videos">0</strong></div>
+                <div class="admin-zone-banner">
+                    <div class="admin-quick-stats">
+                        <div class="insight-card"><span class="insight-label">الأكواد النشطة</span><strong id="admin-active-codes">0</strong></div>
+                        <div class="insight-card"><span class="insight-label">إجمالي الصور</span><strong id="admin-total-images">0</strong></div>
+                        <div class="insight-card"><span class="insight-label">إجمالي الفيديوهات</span><strong id="admin-total-videos">0</strong></div>
+                    </div>
+                    <button id="admin-quick-create" class="primary-button" type="button">إنشاء كود جديد</button>
                 </div>
 
                 <div class="admin-tabs">
@@ -168,7 +180,7 @@
 
                 <section class="admin-tab-pane" data-admin-pane="codes">
                     <div class="chip-row admin-toolbar">
-                        <input id="admin-search" class="admin-search" type="text" placeholder="ابحث عن كود">
+                        <input id="admin-search" class="admin-search" type="text" placeholder="ابحث عن كود أو عميل">
                         <button class="filter-chip active" type="button" data-admin-filter="all">الكل</button>
                         <button class="filter-chip" type="button" data-admin-filter="active">نشط</button>
                         <button class="filter-chip" type="button" data-admin-filter="expired">منتهي</button>
@@ -180,7 +192,7 @@
                 <section class="admin-tab-pane hidden" data-admin-pane="create">
                     <form id="admin-inline-create-form" class="form-grid single-column">
                         <label><span>اسم الكود</span><input name="code" type="text" required></label>
-                        <label><span>عنوان داخلي</span><input name="name" type="text" required></label>
+                        <label><span>العنوان الداخلي</span><input name="name" type="text" required></label>
                         <label><span>اسم العميل</span><input name="clientName" type="text"></label>
                         <label><span>نوع الخطة</span><select name="planType"><option value="trial">Trial</option><option value="standard" selected>Standard</option><option value="vip">VIP</option></select></label>
                         <label><span>أولوية المعالجة</span><select name="processingPriority"><option value="low">منخفضة</option><option value="normal" selected>عادية</option><option value="high">عالية</option><option value="vip">VIP</option></select></label>
@@ -214,7 +226,7 @@
                 <section class="admin-tab-pane hidden" data-admin-pane="settings">
                     <div class="enhanced-box">
                         <span class="insight-label">جلسة الأدمن</span>
-                        <p>اللوحة محفوظة داخل المتصفح الحالي فقط، ويمكنك تسجيل الخروج في أي وقت.</p>
+                        <p>جلسة الإدارة محفوظة داخل المتصفح الحالي فقط، ويمكنك تسجيل الخروج في أي وقت.</p>
                         <button id="admin-inline-logout" class="ghost-button" type="button">تسجيل الخروج</button>
                     </div>
                 </section>

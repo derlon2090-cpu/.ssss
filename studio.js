@@ -16,6 +16,7 @@ const studioState = {
 const studioElements = {
     codeSummary: document.getElementById("code-summary"),
     headerCodeBadge: document.getElementById("header-code-badge"),
+    createBalance: document.getElementById("create-balance"),
     message: document.getElementById("studio-message"),
     refresh: document.getElementById("refresh-workspace"),
     form: document.getElementById("generate-form"),
@@ -46,6 +47,7 @@ const studioElements = {
     adminActiveCodes: document.getElementById("admin-active-codes"),
     adminTotalImages: document.getElementById("admin-total-images"),
     adminTotalVideos: document.getElementById("admin-total-videos"),
+    adminQuickCreate: document.getElementById("admin-quick-create"),
     adminTabs: [...document.querySelectorAll("[data-admin-tab]")],
     adminPanes: [...document.querySelectorAll("[data-admin-pane]")],
     adminSearch: document.getElementById("admin-search"),
@@ -122,11 +124,20 @@ function formatDate(value) {
     }).format(new Date(value));
 }
 
+function renderCreateBalance(code) {
+    studioElements.createBalance.innerHTML = `
+        <strong>${code.remainingImages}</strong> صورة متبقية
+        <span class="balance-divider">|</span>
+        <strong>${code.remainingVideos}</strong> فيديو متبقي
+    `;
+}
+
 function renderSummary(code) {
     studioElements.headerCodeBadge.innerHTML = `
         <strong>${escapeHtml(code.code)}</strong>
         <span>${escapeHtml(code.clientName || code.badgeLabel)}</span>
     `;
+    renderCreateBalance(code);
     studioElements.codeSummary.innerHTML = `
         <div class="summary-headline">
             <div>
@@ -144,7 +155,7 @@ function renderSummary(code) {
             <span>العميل: ${escapeHtml(code.clientName || "-")}</span>
             <span>تاريخ البداية: ${formatDate(code.startsAt)}</span>
             <span>تاريخ الانتهاء: ${formatDate(code.expiresAt)}</span>
-            <span>${code.allowSave ? "الحفظ مفعل" : "الحفظ معطل"} | ${code.allowRegenerate ? "إعادة التوليد متاحة" : "إعادة التوليد غير متاحة"}</span>
+            <span>${code.allowSave ? "حفظ الأعمال مفعل" : "حفظ الأعمال معطل"} | ${code.allowRegenerate ? "إعادة التوليد متاحة" : "إعادة التوليد غير متاحة"}</span>
         </div>
     `;
 }
@@ -337,7 +348,7 @@ function renderAdminCodes() {
                 </div>
                 <span class="mini-badge">${escapeHtml(code.badgeLabel)}</span>
             </div>
-            <div class="summary-list">
+            <div class="summary-list admin-code-list">
                 <span>الحالة: ${escapeHtml(code.status)}</span>
                 <span>العميل: ${escapeHtml(code.clientName || "-")}</span>
                 <span>صور: ${code.remainingImages} / ${code.maxImages}</span>
@@ -537,6 +548,10 @@ studioElements.adminTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
         switchAdminTab(tab.dataset.adminTab);
     });
+});
+
+studioElements.adminQuickCreate.addEventListener("click", () => {
+    switchAdminTab("create");
 });
 
 studioElements.adminSearch.addEventListener("input", () => {
