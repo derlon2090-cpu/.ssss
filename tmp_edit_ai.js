@@ -1,0 +1,7 @@
+const fs = require("fs");
+const p = "C:/ai art/ai.js";
+let t = fs.readFileSync(p, "utf8");
+t = t.replace('        enhancedPrompt: workRecord.enhancedPrompt || workRecord.prompt,\n        type: workRecord.type,', '        enhancedPrompt: workRecord.enhancedPrompt || workRecord.prompt,\n        title: workRecord.title || null,\n        type: workRecord.type,');
+t = t.replace('        previewUrl: buildAbsoluteUrl(req, workRecord.previewUrl),\n        saved: workRecord.saved,', '        previewUrl: buildAbsoluteUrl(req, workRecord.previewUrl),\n        downloadName: workRecord.downloadName || null,\n        mimeType: workRecord.mimeType || null,\n        provider: workRecord.provider || null,\n        saved: workRecord.saved,');
+t = t.replace('        styleSuggestions: workRecord.styleSuggestions || [],\n        processingPriority: workRecord.processingPriority || "normal",', '        styleSuggestions: workRecord.styleSuggestions || [],\n        timeOfDay: workRecord.timeOfDay || null,\n        timeOfDayLabel: workRecord.timeOfDayLabel || null,\n        visualStyle: workRecord.visualStyle || null,\n        styleLabel: workRecord.styleLabel || null,\n        cameraAnglePreset: workRecord.cameraAnglePreset || null,\n        cameraAngleLabel: workRecord.cameraAngleLabel || null,\n        outputQuality: workRecord.outputQuality || null,\n        qualityLabel: workRecord.qualityLabel || null,\n        processingPriority: workRecord.processingPriority || "normal",');
+fs.writeFileSync(p, t);

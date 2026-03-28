@@ -135,47 +135,34 @@ function adminApi(url, options = {}) {
     });
 }
 
-async function improvePrompt(userPrompt) {
-    try {
-        const response = await fetch("/api/gemini", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ prompt: userPrompt })
-        });
-
-        const raw = await response.text();
-        let payload = {};
-        try {
-            payload = raw ? JSON.parse(raw) : {};
-        } catch (error) {
-            console.error(raw || "ط·آ·ط¹آ¾ط·آ·ط¢آ¹ط·آ·ط¢آ°ط·آ·ط¢آ± ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ±ط·آ·ط¢آ§ط·آ·ط·إ’ط·آ·ط¢آ© ط·آ·ط¢آ§ط·آ·ط¢آ³ط·آ·ط¹آ¾ط·آ·ط¢آ¬ط·آ·ط¢آ§ط·آ·ط¢آ¨ط·آ·ط¢آ© Gemini.");
-            return {
-                prompt: userPrompt,
-                source: "local-fallback"
-            };
-        }
-
-        if (!response.ok) {
-            console.error(payload.message || payload.error || "ط·آ·ط¹آ¾ط·آ·ط¢آ¹ط·آ·ط¢آ°ط·آ·ط¢آ± ط·آ·ط¹آ¾ط·آ·ط¢آ­ط·آ·ط¢آ³ط·آ¸ط¸آ¹ط·آ¸أ¢â‚¬آ  ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ¸ط«â€ ط·آ·ط¢آµط·آ¸ط¸آ¾ ط·آ·ط¢آ¹ط·آ·ط¢آ¨ط·آ·ط¢آ± Gemini.");
-            return {
-                prompt: userPrompt,
-                source: "local-fallback"
-            };
-        }
-
-        return {
-            prompt: payload.prompt || userPrompt,
-            source: "gemini"
-        };
-    } catch (error) {
-        console.error(error);
-        return {
+async function improvePrompt(userPrompt, options = {}) {
+    const response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
             prompt: userPrompt,
-            source: "local-fallback"
-        };
+            ...options
+        })
+    });
+
+    const raw = await response.text();
+    let payload = {};
+    try {
+        payload = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        throw new Error(raw || "Gemini response could not be read.");
     }
+
+    if (!response.ok) {
+        throw new Error(payload.message || payload.error || "Gemini prompt enhancement failed.");
+    }
+
+    return {
+        prompt: payload.prompt || userPrompt,
+        source: "gemini"
+    };
 }
 
 function getCodeFromLocation() {
@@ -552,7 +539,7 @@ async function analyzePrompt() {
         { progress: 58, text: "ط·آ·ط¢آ·ط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ¢ط¢آ±ط·آ·ط¢آ¸ط·آ¸ط¢آ¹ ط·آ·ط¢آ·ط·آ¹ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ­ط·آ·ط¢آ·ط·آ¢ط¢آ¯ط·آ·ط¢آ¸ط·آ¸ط¢آ¹ط·آ·ط¢آ·ط·آ¢ط¢آ¯ ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ¸ط·آ¸ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ¹ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع† ط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ¦ط·آ·ط¢آ¸ط·آ¦أ¢â‚¬â„¢ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ  ط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ·ط¢آ·ط·آ¹ط¢آ¾..." },
         { progress: 84, text: "ط·آ·ط¢آ·ط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ¢ط¢آ±ط·آ·ط¢آ¸ط·آ¸ط¢آ¹ ط·آ·ط¢آ·ط·آ¢ط¢آ¨ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ·ط¥â€™ ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ·ط·آ¢ط¢آµط·آ·ط¢آ¸ط·آ¸ط¢آ¾ ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ·ط·آ¹ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آµط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ¸ط·آ¸ط¢آ¹ط·آ·ط¢آ·ط·آ¢ط¢آ±ط·آ·ط¢آ¸ط·آ¸ط¢آ¹ ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط·إ’ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ¢ط¢آ¦ط·آ·ط¢آ¸ط·آ¸ط¢آ¹..." }
     ]);
-    const promptEnhancement = await improvePrompt(userPrompt);
+    const promptEnhancement = await improvePrompt(userPrompt, { type: studioElements.type.value, ...buildControlsPayload() });
     const improvedPrompt = promptEnhancement.prompt;
     const usedGemini = promptEnhancement.source === "gemini";
     const response = await studioApi("/api/prompt-intelligence/analyze", {
@@ -592,7 +579,7 @@ async function performGeneration(variations = 1, overrides = {}) {
     ]);
 
     try {
-        const promptEnhancement = await improvePrompt(userPrompt);
+        const promptEnhancement = await improvePrompt(userPrompt, { type: payload.type, ...buildControlsPayload(payload) });
         const usedGemini = promptEnhancement.source === "gemini";
         payload.prompt = promptEnhancement.prompt;
         payload.originalPrompt = userPrompt;

@@ -2,7 +2,9 @@ const crypto = require("crypto");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const geminiHandler = require("./api/gemini");
+const geminiApi = require("./api/gemini-service-final");
+const geminiHandler = geminiApi;
+const { improvePromptWithGemini, generateImageWithGemini, normalizeGeminiOptions } = geminiApi;
 
 loadEnvFile(path.join(__dirname, ".env"));
 
@@ -530,7 +532,15 @@ function addEvent(codeRecord, action, message, meta = {}) {
 }
 
 function buildAbsoluteUrl(req, relativePath) {
-    return new URL(relativePath, `${req.protocol}://${req.get("host")}`).toString();
+    if (!relativePath) {
+        return "";
+    }
+
+    if (/^(?:https?:|data:)/i.test(relativePath)) {
+        return relativePath;
+    }
+
+    return new URL(relativePath, req.protocol + "://" + req.get("host")).toString();
 }
 
 function serializeCode(codeRecord) {
@@ -575,14 +585,26 @@ function serializeWork(req, workRecord) {
         prompt: workRecord.originalPrompt || workRecord.prompt,
         originalPrompt: workRecord.originalPrompt || workRecord.prompt,
         enhancedPrompt: workRecord.enhancedPrompt || workRecord.prompt,
+        title: workRecord.title || null,
         type: workRecord.type,
         duration: workRecord.duration,
         fileUrl: buildAbsoluteUrl(req, workRecord.fileUrl),
         previewUrl: buildAbsoluteUrl(req, workRecord.previewUrl),
+        downloadName: workRecord.downloadName || null,
+        mimeType: workRecord.mimeType || null,
+        provider: workRecord.provider || null,
         saved: workRecord.saved,
         sourceWorkId: workRecord.sourceWorkId,
         qualityLevel: workRecord.qualityLevel || "balanced",
         styleSuggestions: workRecord.styleSuggestions || [],
+        timeOfDay: workRecord.timeOfDay || null,
+        timeOfDayLabel: workRecord.timeOfDayLabel || null,
+        visualStyle: workRecord.visualStyle || null,
+        styleLabel: workRecord.styleLabel || null,
+        cameraAnglePreset: workRecord.cameraAnglePreset || null,
+        cameraAngleLabel: workRecord.cameraAngleLabel || null,
+        outputQuality: workRecord.outputQuality || null,
+        qualityLabel: workRecord.qualityLabel || null,
         processingPriority: workRecord.processingPriority || "normal",
         createdAt: workRecord.createdAt
     };
@@ -818,8 +840,8 @@ function createMockPreview(workRecord, codeRecord, intelligence) {
     return `/${filename}`;
 }
 
-function createWork(req, options) {
-    const { codeRecord, prompt, type, duration, sourceWorkId = null } = options;
+async function createWork(req, options) {
+    const { codeRecord, prompt, type, duration, sourceWorkId = null, originalPrompt = prompt, enhancedPrompt = prompt, controls = {} } = options;
 
     ensureCodeCanGenerate(codeRecord);
 
@@ -837,16 +859,19 @@ function createWork(req, options) {
         }
     }
 
-    const intelligence = buildPromptIntelligence(prompt, type);
+    const normalizedControls = normalizeGeminiOptions(controls);
+    const intelligence = buildPromptIntelligence(originalPrompt, type);
+    intelligence.enhancedPrompt = enhancedPrompt || intelligence.enhancedPrompt;
     const workId = store.nextWorkId;
     const createdAt = nowIso();
     const baseWork = {
         id: workId,
         codeId: codeRecord.id,
         code: codeRecord.code,
-        prompt,
-        originalPrompt: prompt,
+        prompt: enhancedPrompt,
+        originalPrompt,
         enhancedPrompt: intelligence.enhancedPrompt,
+        title: originalPrompt.split(/\s+/).slice(0, 4).join(" ") || (type === "video" ? "Video result" : "Image result"),
         type,
         duration: type === "video" ? duration : null,
         createdAt,
@@ -854,14 +879,44 @@ function createWork(req, options) {
         saved: codeRecord.allowSave,
         qualityLevel: intelligence.qualityLevel,
         styleSuggestions: intelligence.suggestedStyles,
+        timeOfDay: normalizedControls.timeOfDay,
+        timeOfDayLabel: ({ auto: "Auto", day: "Day", night: "Night" })[normalizedControls.timeOfDay],
+        visualStyle: normalizedControls.visualStyle,
+        styleLabel: ({ realistic: "Realistic", cinematic: "Cinematic", commercial: "Commercial", anime: "Anime" })[normalizedControls.visualStyle],
+        cameraAnglePreset: normalizedControls.cameraAnglePreset,
+        cameraAngleLabel: ({ close: "Close", medium: "Medium", wide: "Wide" })[normalizedControls.cameraAnglePreset],
+        outputQuality: normalizedControls.outputQuality,
+        qualityLabel: ({ normal: "Normal", high: "High", ultra: "Ultra" })[normalizedControls.outputQuality],
         processingPriority: codeRecord.processingPriority || "normal"
     };
 
-    const previewPath = createMockPreview(baseWork, codeRecord, intelligence);
+    const asset = type === "image"
+        ? await (async () => {
+            const geminiImage = await generateImageWithGemini(baseWork.enhancedPrompt, {
+                ...normalizedControls,
+                aspectRatio: intelligence.aspectRatio || "1:1"
+            });
+            const mimeType = geminiImage.mimeType || "image/png";
+            const extension = mimeType.includes("png") ? "png" : (mimeType.includes("webp") ? "webp" : "jpg");
+            const dataUrl = "data:" + mimeType + ";base64," + geminiImage.bytes.toString("base64");
+            return {
+                fileUrl: dataUrl,
+                previewUrl: dataUrl,
+                mimeType,
+                downloadName: "generated-image-" + workId + "." + extension,
+                provider: "gemini"
+            };
+        })()
+        : {
+            fileUrl: createMockPreview(baseWork, codeRecord, intelligence),
+            previewUrl: createMockPreview(baseWork, codeRecord, intelligence),
+            mimeType: "image/svg+xml",
+            downloadName: "generated-video-" + workId + ".svg",
+            provider: "local-mock"
+        };
     const workRecord = {
         ...baseWork,
-        fileUrl: previewPath,
-        previewUrl: previewPath
+        ...asset
     };
 
     store.nextWorkId += 1;
@@ -896,6 +951,18 @@ function createWork(req, options) {
         saved: codeRecord.allowSave,
         intelligence
     };
+}
+
+async function resolveEnhancedPrompt(promptValue, type, controls, promptSource) {
+    const normalizedPromptSource = normalizeOptionalText(promptSource);
+    if (normalizedPromptSource === "gemini") {
+        return promptValue;
+    }
+
+    return improvePromptWithGemini(promptValue, {
+        type,
+        ...controls
+    });
 }
 
 function adjustRemainingValue(currentMax, currentRemaining, nextMax) {
@@ -1322,7 +1389,7 @@ app.post("/api/contact-submissions", wrap((req, res) => {
     });
 }));
 
-app.post("/api/content/generate", wrap((req, res) => {
+app.post("/api/content/generate", wrap(async (req, res) => {
     const codeRecord = findCodeOrFail(req.body.code || req.body.userCode);
     const prompt = parsePrompt(req.body.prompt);
     const type = parseContentType(req.body.type);
@@ -1330,9 +1397,12 @@ app.post("/api/content/generate", wrap((req, res) => {
         ? parseInteger(req.body.duration, "duration", { min: 1 })
         : null;
 
-    const { workRecord, saved, intelligence } = createWork(req, {
+    const { workRecord, saved, intelligence } = await createWork(req, {
         codeRecord,
         prompt,
+        originalPrompt: req.body.originalPrompt ? parsePrompt(req.body.originalPrompt) : prompt,
+        enhancedPrompt: prompt,
+        controls: req.body,
         type,
         duration
     });
@@ -1347,12 +1417,12 @@ app.post("/api/content/generate", wrap((req, res) => {
             work: serializeWork(req, workRecord),
             saved,
             intelligence,
-            mockOutput: true
+            mockOutput: type !== "image"
         }
     });
 }));
 
-app.post("/api/works/:workId/regenerate", wrap((req, res) => {
+app.post("/api/works/:workId/regenerate", wrap(async (req, res) => {
     const sourceWork = findWorkOrFail(req.params.workId);
     const codeRecord = store.codes.find((item) => item.id === sourceWork.codeId);
 
@@ -1371,9 +1441,12 @@ app.post("/api/works/:workId/regenerate", wrap((req, res) => {
             : sourceWork.duration)
         : null;
 
-    const { workRecord, saved, intelligence } = createWork(req, {
+    const { workRecord, saved, intelligence } = await createWork(req, {
         codeRecord,
         prompt,
+        originalPrompt: req.body.originalPrompt ? parsePrompt(req.body.originalPrompt) : (sourceWork.originalPrompt || prompt),
+        enhancedPrompt: prompt,
+        controls: req.body,
         type: sourceWork.type,
         duration,
         sourceWorkId: sourceWork.id
@@ -1389,7 +1462,7 @@ app.post("/api/works/:workId/regenerate", wrap((req, res) => {
             work: serializeWork(req, workRecord),
             saved,
             intelligence,
-            mockOutput: true
+            mockOutput: sourceWork.type !== "image"
         }
     });
 }));
@@ -1406,7 +1479,7 @@ app.post("/verify-code", wrap((req, res) => {
     });
 }));
 
-app.post("/generate", wrap((req, res) => {
+app.post("/generate", wrap(async (req, res) => {
     const codeRecord = findCodeOrFail(req.body.userCode || req.body.code);
     const prompt = parsePrompt(req.body.prompt);
     const type = parseContentType(req.body.type);
@@ -1414,9 +1487,12 @@ app.post("/generate", wrap((req, res) => {
         ? parseInteger(req.body.duration, "duration", { min: 1 })
         : null;
 
-    const { workRecord, saved, intelligence } = createWork(req, {
+    const { workRecord, saved, intelligence } = await createWork(req, {
         codeRecord,
         prompt,
+        originalPrompt: req.body.originalPrompt ? parsePrompt(req.body.originalPrompt) : prompt,
+        enhancedPrompt: prompt,
+        controls: req.body,
         type,
         duration
     });
@@ -1430,7 +1506,7 @@ app.post("/generate", wrap((req, res) => {
             work: serializeWork(req, workRecord),
             saved,
             intelligence,
-            mockOutput: true
+            mockOutput: type !== "image"
         }
     });
 }));
