@@ -699,6 +699,27 @@
         const headers = new Headers(options.headers || {});
         const body = options.body ? JSON.parse(options.body) : {};
         const pathname = new URL(url, window.location.href).pathname;
+
+        if (pathname === "/api/gemini" && method === "POST") {
+            const prompt = normalizeText(body.prompt);
+            if (!prompt) {
+                throw createError(400, "الوصف مطلوب.");
+            }
+
+            const intelligence = buildPromptIntelligence(prompt, normalizeText(body.type || "image").toLowerCase(), {
+                timeOfDay: normalizeText(body.timeOfDay || "auto").toLowerCase(),
+                visualStyle: normalizeText(body.visualStyle || "realistic").toLowerCase(),
+                cameraAnglePreset: normalizeText(body.cameraAnglePreset || "medium").toLowerCase(),
+                outputQuality: normalizeText(body.outputQuality || "high").toLowerCase()
+            });
+
+            return {
+                success: true,
+                prompt: intelligence.enhancedPrompt,
+                source: "local-intelligence"
+            };
+        }
+
         if (pathname === "/api/admin/login" && method === "POST") {
             const username = normalizeText(body.username);
             const password = normalizeText(body.password);
@@ -937,9 +958,6 @@
     async function fallbackFetch(input, init = {}) {
         const url = typeof input === "string" ? input : input.url;
         const parsed = new URL(url, window.location.href);
-        if (parsed.pathname === "/api/gemini") {
-            return window.__creditsOriginalFetch(input, init);
-        }
         if (!parsed.pathname.startsWith("/api/")) {
             return window.__creditsOriginalFetch(input, init);
         }
