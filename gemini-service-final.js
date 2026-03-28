@@ -1,4 +1,3 @@
-
 const GEMINI_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash";
 const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
 const GEMINI_API_BASE = process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com/v1beta/models";
@@ -20,7 +19,7 @@ function normalizeOption(value, allowedValues, fallbackValue) {
     return allowedValues.includes(normalizedValue) ? normalizedValue : fallbackValue;
 }
 
-function normalizeOptions(source = {}) {
+function normalizeGeminiOptions(source = {}) {
     return {
         type: normalizeOption(source.type, ["image", "video"], "image"),
         timeOfDay: normalizeOption(source.timeOfDay, ["auto", "day", "night"], "auto"),
@@ -42,6 +41,7 @@ function extractGeminiParts(data) {
     const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
     return candidates.flatMap((candidate) => Array.isArray(candidate?.content?.parts) ? candidate.content.parts : []);
 }
+
 function extractTextPart(data) {
     const textPart = extractGeminiParts(data).find((part) => typeof part?.text === "string" && part.text.trim());
     return textPart ? textPart.text.trim() : "";
@@ -56,18 +56,18 @@ function extractInlineImagePart(data) {
 }
 
 function buildPromptInstruction(prompt, options = {}) {
-    const normalizedOptions = normalizeOptions(options);
+    const normalizedOptions = normalizeGeminiOptions(options);
     return [
-        "Convert this " + (normalizedOptions.type === "video" ? "video" : "image") + " request into one professional production prompt: \"" + prompt + "\"",
+        `Convert this ${normalizedOptions.type === "video" ? "video" : "image"} request into one professional production prompt: "${prompt}"`,
         "",
         "Rules:",
         "- Identify the main subject.",
         "- Identify the action.",
         "- Add a fitting environment if it is missing.",
-        "- Time of day: " + CONTROL_LABELS.timeOfDay[normalizedOptions.timeOfDay] + ". If Auto, infer the best option from the scene.",
-        "- Visual style: " + CONTROL_LABELS.visualStyle[normalizedOptions.visualStyle] + ".",
-        "- Camera angle: " + CONTROL_LABELS.cameraAnglePreset[normalizedOptions.cameraAnglePreset] + ".",
-        "- Output quality target: " + CONTROL_LABELS.outputQuality[normalizedOptions.outputQuality] + ".",
+        `- Time of day: ${CONTROL_LABELS.timeOfDay[normalizedOptions.timeOfDay]}. If Auto, infer the best option from the scene.`,
+        `- Visual style: ${CONTROL_LABELS.visualStyle[normalizedOptions.visualStyle]}.`,
+        `- Camera angle: ${CONTROL_LABELS.cameraAnglePreset[normalizedOptions.cameraAnglePreset]}.`,
+        `- Output quality target: ${CONTROL_LABELS.outputQuality[normalizedOptions.outputQuality]}.`,
         "- Add lighting details.",
         "- Output in English only.",
         "- Do not include any text, watermark, caption, typography, or logo inside the image.",
@@ -80,7 +80,7 @@ async function callGeminiModel(model, payload) {
         throw new Error("Fetch is not available on this server runtime");
     }
 
-    const response = await fetch(GEMINI_API_BASE + "/" + encodeURIComponent(model) + ":generateContent", {
+    const response = await fetch(`${GEMINI_API_BASE}/${encodeURIComponent(model)}:generateContent`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -96,6 +96,7 @@ async function callGeminiModel(model, payload) {
 
     return data;
 }
+
 async function improvePromptWithGemini(prompt, options = {}) {
     const data = await callGeminiModel(GEMINI_TEXT_MODEL, {
         contents: [
@@ -114,15 +115,15 @@ async function improvePromptWithGemini(prompt, options = {}) {
 }
 
 function buildImageGenerationPrompt(prompt, options = {}) {
-    const normalizedOptions = normalizeOptions(options);
+    const normalizedOptions = normalizeGeminiOptions(options);
     return [
         prompt,
         "",
         "Image generation rules:",
-        "- Style target: " + CONTROL_LABELS.visualStyle[normalizedOptions.visualStyle],
-        "- Camera framing: " + CONTROL_LABELS.cameraAnglePreset[normalizedOptions.cameraAnglePreset],
-        "- Time of day: " + CONTROL_LABELS.timeOfDay[normalizedOptions.timeOfDay],
-        "- Quality target: " + CONTROL_LABELS.outputQuality[normalizedOptions.outputQuality],
+        `- Style target: ${CONTROL_LABELS.visualStyle[normalizedOptions.visualStyle]}`,
+        `- Camera framing: ${CONTROL_LABELS.cameraAnglePreset[normalizedOptions.cameraAnglePreset]}`,
+        `- Time of day: ${CONTROL_LABELS.timeOfDay[normalizedOptions.timeOfDay]}`,
+        `- Quality target: ${CONTROL_LABELS.outputQuality[normalizedOptions.outputQuality]}`,
         "- No text inside image.",
         "- No watermark.",
         "- Single polished final frame."
@@ -130,7 +131,7 @@ function buildImageGenerationPrompt(prompt, options = {}) {
 }
 
 async function generateImageWithGemini(prompt, options = {}) {
-    const normalizedOptions = normalizeOptions(options);
+    const normalizedOptions = normalizeGeminiOptions(options);
     const payload = {
         contents: [
             {
@@ -155,30 +156,36 @@ async function generateImageWithGemini(prompt, options = {}) {
     const data = await callGeminiModel(GEMINI_IMAGE_MODEL, payload);
     const imagePart = extractInlineImagePart(data);
     if (!imagePart) {
-        throw new Error(extractTextPart(data) || "Gemini did not return image data");
+        throw new Error("Gemini image response did not include inline image data");
     }
 
     const inlineData = imagePart.inlineData || imagePart.inline_data;
-    const mimeType = inlineData.mimeType || inlineData.mime_type || "image/png";
+    const mimeType = inlineData?.mimeType || inlineData?.mime_type || "image/png";
+    const base64 = inlineData?.data || "";
+    if (!base64) {
+        throw new Error("Gemini image response did not include image bytes");
+    }
+
     return {
-        bytes: Buffer.from(inlineData.data, "base64"),
         mimeType,
-        text: extractTextPart(data)
+        bytes: Buffer.from(base64, "base64")
     };
 }
 
-async function handler(req, res) {
+async function geminiHandler(req, res) {
     if (req.method !== "POST") {
         return res.status(405).json({ error: "Only POST allowed" });
     }
 
     try {
-        const { prompt, ...options } = req.body || {};
-        if (!prompt || !String(prompt).trim()) {
+        const prompt = String(req.body?.prompt || "").trim();
+        if (!prompt) {
             return res.status(400).json({ error: "Prompt is required" });
         }
 
-        const improvedPrompt = await improvePromptWithGemini(String(prompt).trim(), options);
+        const options = normalizeGeminiOptions(req.body || {});
+        const improvedPrompt = await improvePromptWithGemini(prompt, options);
+
         return res.status(200).json({
             success: true,
             prompt: improvedPrompt,
@@ -186,14 +193,12 @@ async function handler(req, res) {
         });
     } catch (error) {
         return res.status(500).json({
-            error: "Gemini API error",
-            message: error.message || "Unexpected Gemini error"
+            error: error?.message || "Gemini API error"
         });
     }
 }
 
-module.exports = handler;
-module.exports.default = handler;
+module.exports = geminiHandler;
 module.exports.improvePromptWithGemini = improvePromptWithGemini;
 module.exports.generateImageWithGemini = generateImageWithGemini;
-module.exports.normalizeGeminiOptions = normalizeOptions;
+module.exports.normalizeGeminiOptions = normalizeGeminiOptions;

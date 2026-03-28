@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const geminiApi = require("./api/gemini-service-final");
+const geminiApi = require("./gemini-service-final");
 const geminiHandler = geminiApi;
 const { improvePromptWithGemini, generateImageWithGemini, normalizeGeminiOptions } = geminiApi;
 

@@ -4,7 +4,6 @@ const lookupMessage = document.getElementById("lookup-message");
 const startNowButton = document.getElementById("start-now-button");
 const lookupSection = document.getElementById("lookup-section");
 const openHomeAdmin = document.getElementById("open-home-admin");
-const openHomeAdminSecondary = document.getElementById("open-home-admin-secondary");
 const closeHomeAdmin = document.getElementById("close-home-admin");
 const homeAdminOverlay = document.getElementById("home-admin-overlay");
 const homeAdminBackdrop = document.querySelector("[data-close-home-admin='true']");
@@ -59,10 +58,15 @@ startNowButton.addEventListener("click", () => {
     lookupCode.focus();
 });
 
-openHomeAdmin.addEventListener("click", openAdminOverlay);
-openHomeAdminSecondary.addEventListener("click", openAdminOverlay);
-closeHomeAdmin.addEventListener("click", closeAdminOverlay);
-homeAdminBackdrop.addEventListener("click", closeAdminOverlay);
+if (openHomeAdmin) {
+    openHomeAdmin.addEventListener("click", openAdminOverlay);
+}
+if (closeHomeAdmin) {
+    closeHomeAdmin.addEventListener("click", closeAdminOverlay);
+}
+if (homeAdminBackdrop) {
+    homeAdminBackdrop.addEventListener("click", closeAdminOverlay);
+}
 
 lookupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
