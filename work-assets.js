@@ -21,11 +21,19 @@
         return makeBlobUrl(work);
     }
 
-    function download(work) {
+    function download(work, options = {}) {
         const href = resolveUrl(work);
         const anchor = document.createElement("a");
         anchor.href = href;
-        anchor.download = work.downloadName || "smart-credits-result.svg";
+        const baseName = work.downloadName || "smart-credits-result.svg";
+        if (options.suffix) {
+            const extensionIndex = baseName.lastIndexOf(".");
+            anchor.download = extensionIndex === -1
+                ? `${baseName}-${options.suffix}`
+                : `${baseName.slice(0, extensionIndex)}-${options.suffix}${baseName.slice(extensionIndex)}`;
+        } else {
+            anchor.download = baseName;
+        }
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();

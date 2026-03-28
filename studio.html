@@ -123,7 +123,18 @@
                             </div>
                             <div class="action-row create-actions">
                                 <button id="generate-button" class="primary-button" type="submit">إنشاء صورة</button>
+                                <button id="generate-three-button" class="ghost-button" type="button">إنشاء 3 نتائج</button>
                                 <button id="analyze-button" class="ghost-button" type="button">تحسين الوصف</button>
+                            </div>
+                        </div>
+
+                        <div id="generation-progress" class="generation-progress hidden full-span" aria-live="polite">
+                            <div class="progress-copy">
+                                <strong id="generation-status">جاري تجهيز التحليل...</strong>
+                                <span id="generation-progress-value">0%</span>
+                            </div>
+                            <div class="progress-track">
+                                <span id="generation-progress-bar" class="progress-bar"></span>
                             </div>
                         </div>
                     </form>
@@ -141,6 +152,7 @@
                     </div>
 
                     <div id="latest-result" class="latest-result hidden"></div>
+                    <div id="latest-batch" class="latest-result hidden"></div>
                 </section>
 
                 <section class="panel">

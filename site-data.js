@@ -1,6 +1,6 @@
 (function () {
-    const STORE_KEY = "credits_platform_store_v3";
-    const LEGACY_STORE_KEY = "credits_platform_store_v2";
+    const STORE_KEY = "credits_platform_store_v4";
+    const LEGACY_KEYS = ["credits_platform_store_v3", "credits_platform_store_v2"];
     const SESSION_KEY = "credits_platform_admin_session";
     const DEFAULT_ADMIN = {
         username: "admin",
@@ -20,23 +20,25 @@
     }
 
     function normalizeStore(parsed) {
+        const safe = parsed || {};
         return {
-            codes: Array.isArray(parsed.codes) ? parsed.codes : [],
-            works: Array.isArray(parsed.works) ? parsed.works : [],
-            events: Array.isArray(parsed.events) ? parsed.events : [],
-            nextCodeId: Number.isInteger(parsed.nextCodeId) ? parsed.nextCodeId : 1,
-            nextWorkId: Number.isInteger(parsed.nextWorkId) ? parsed.nextWorkId : 1,
-            nextEventId: Number.isInteger(parsed.nextEventId) ? parsed.nextEventId : 1
+            codes: Array.isArray(safe.codes) ? safe.codes : [],
+            works: Array.isArray(safe.works) ? safe.works : [],
+            events: Array.isArray(safe.events) ? safe.events : [],
+            nextCodeId: Number.isInteger(safe.nextCodeId) ? safe.nextCodeId : 1,
+            nextWorkId: Number.isInteger(safe.nextWorkId) ? safe.nextWorkId : 1,
+            nextEventId: Number.isInteger(safe.nextEventId) ? safe.nextEventId : 1
         };
     }
 
     function loadStore() {
         try {
-            const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_STORE_KEY);
-            if (!raw) {
+            const keys = [STORE_KEY, ...LEGACY_KEYS];
+            const existing = keys.map((key) => localStorage.getItem(key)).find(Boolean);
+            if (!existing) {
                 return createEmptyStore();
             }
-            return normalizeStore(JSON.parse(raw));
+            return normalizeStore(JSON.parse(existing));
         } catch (error) {
             return createEmptyStore();
         }
@@ -163,6 +165,10 @@
             cameraAngleLabel: work.cameraAngleLabel || "متوسطة",
             sceneType: work.sceneType || "abstract",
             processingPriority: work.processingPriority || "normal",
+            extracted: work.extracted || null,
+            autoCompleted: work.autoCompleted || [],
+            variationIndex: work.variationIndex || 0,
+            variationCount: work.variationCount || 1,
             createdAt: work.createdAt
         };
     }
@@ -194,8 +200,8 @@
     }
 
     function findCode(store, codeValue) {
-        const code = normalizeCode(codeValue);
-        const record = store.codes.find((item) => item.code === code);
+        const normalized = normalizeCode(codeValue);
+        const record = store.codes.find((item) => item.code === normalized);
         if (!record) {
             throw createError(404, "الكود غير موجود.");
         }
@@ -212,7 +218,7 @@
 
     function extractKeywords(prompt) {
         const matches = (prompt.match(/[A-Za-z0-9\u0600-\u06FF]+/g) || []).map((word) => word.toLowerCase());
-        return [...new Set(matches.filter((word) => word.length > 2))].slice(0, 10);
+        return [...new Set(matches.filter((word) => word.length > 2))].slice(0, 12);
     }
 
     function slugify(value) {
@@ -220,23 +226,15 @@
             .toLowerCase()
             .replace(/[^a-z0-9\u0600-\u06FF]+/gi, "-")
             .replace(/^-+|-+$/g, "")
-            .slice(0, 60) || "smart-credits-result";
-    }
-
-    function escapeXml(value) {
-        return String(value || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
+            .slice(0, 64) || "smart-credits-result";
     }
 
     function pickTimeOfDay(prompt, requestedTime) {
         if (requestedTime === "day" || requestedTime === "night") {
             return requestedTime;
         }
-        if (/night|ليل|مساء|نيون|moon|قمري/i.test(prompt)) return "night";
-        if (/day|نهار|شمس|sun|morning|شمسي/i.test(prompt)) return "day";
+        if (/night|ليل|مساء|نيون|moon|قمري/.test(prompt.toLowerCase())) return "night";
+        if (/day|نهار|شمس|sun|morning|شمسي/.test(prompt.toLowerCase())) return "day";
         return "day";
     }
 
@@ -299,87 +297,230 @@
     }
 
     function getQualityDescription(value) {
-        return value === "ultra"
-            ? "ultra detailed, 4k export, premium finish"
-            : value === "normal"
-                ? "clean output, balanced detail"
-                : "high quality, crisp lighting, polished details";
+        if (value === "ultra") return "ultra detailed, 4k export, premium finish";
+        if (value === "normal") return "clean output, balanced detail";
+        return "high quality, crisp lighting, polished details";
     }
 
     function detectSceneType(prompt) {
         const lower = prompt.toLowerCase();
-        if (/car|سيارة|vehicle|luxury car/.test(lower)) return "car";
-        if (/portrait|face|person|man|woman|رجل|امرأة|شخص/.test(lower)) return "portrait";
-        if (/product|منتج|brand|اعلان|bottle|watch|perfume/.test(lower)) return "product";
-        if (/tower|building|home|villa|house|مبنى|منزل|برج|عقار/.test(lower)) return "building";
+        if (/car|vehicle|luxury car|drive|driving|سيارة|مركبة|قيادة/.test(lower)) return "car";
+        if (/product|brand|bottle|watch|perfume|منتج|إعلان|براند|ساعة|عطر/.test(lower)) return "product";
+        if (/tower|building|villa|house|office|مبنى|برج|عقار|مكتب|فيلا|منزل/.test(lower)) return "building";
         if (/food|burger|coffee|plate|restaurant|مطعم|قهوة|برجر|طعام/.test(lower)) return "food";
         if (/mountain|beach|sea|forest|desert|طبيعة|جبال|بحر|غابة|صحراء/.test(lower)) return "landscape";
+        if (/person|man|woman|businessman|portrait|face|رجل|امرأة|شخص|بورتريه|وجه|أعمال/.test(lower)) return "portrait";
         return "abstract";
     }
 
-    function inferSubject(keywords, sceneType) {
+    function inferSubject(keywords, sceneType, prompt) {
+        const lower = prompt.toLowerCase();
+        if (/businessman|رجل أعمال|رجل اعمال/.test(lower)) return "رجل أعمال";
+        if (/woman|امرأة/.test(lower)) return "امرأة";
+        if (/(^| )man( |$)|رجل/.test(lower)) return "رجل";
+        if (/car|vehicle|سيارة/.test(lower) && sceneType === "car") return "سيارة فاخرة";
         const labels = {
-            car: "سيارة",
-            portrait: "شخصية",
+            car: "سيارة فاخرة",
+            portrait: "شخصية رئيسية",
             product: "منتج",
             building: "مبنى",
-            food: "طبق أو منتج غذائي",
+            food: "طبق احترافي",
             landscape: "مشهد طبيعي",
             abstract: keywords[0] || "المشهد"
         };
         return labels[sceneType] || keywords[0] || "المشهد";
     }
 
-    function inferEnvironment(prompt, sceneType) {
-        const labels = {
-            car: "سيارة أو بيئة قيادة فاخرة",
-            portrait: "مشهد شخصي أو جلسة تصوير",
-            product: "عرض منتج احترافي",
-            building: "مشهد معماري أو عقاري",
-            food: "إخراج خاص بالمطاعم والمنتجات الغذائية",
-            landscape: "بيئة خارجية طبيعية",
-            abstract: /city|street|شارع|مدينة/.test(prompt.toLowerCase()) ? "مشهد حضري" : "بيئة إبداعية مخصصة"
+    function detectAction(prompt, sceneType) {
+        const lower = prompt.toLowerCase();
+        if (/run|running|يجري|يركض|سريع/.test(lower)) {
+            return {
+                key: "running",
+                label: "يجري",
+                prompt: "running fast, dynamic body posture, subtle motion blur, energetic movement"
+            };
+        }
+        if (/sit|sitting|يجلس|جالس/.test(lower)) {
+            return {
+                key: "sitting",
+                label: "يجلس",
+                prompt: "seated posture, composed pose, confident body language"
+            };
+        }
+        if (/drive|driving|يقود|قيادة/.test(lower) || sceneType === "car") {
+            return {
+                key: "driving",
+                label: "يقود",
+                prompt: "driving a premium vehicle, focused expression, realistic interior reflections"
+            };
+        }
+        if (/walk|walking|يمشي/.test(lower)) {
+            return {
+                key: "walking",
+                label: "يمشي",
+                prompt: "walking naturally, confident movement, grounded pacing"
+            };
+        }
+        if (/stand|standing|يقف|واقف/.test(lower)) {
+            return {
+                key: "standing",
+                label: "يقف",
+                prompt: "hero standing pose, balanced posture, clear subject focus"
+            };
+        }
+        return {
+            key: sceneType === "product" ? "display" : "hero",
+            label: sceneType === "product" ? "يعرض" : "وضعية رئيسية",
+            prompt: sceneType === "product"
+                ? "premium product display, centered hero composition"
+                : "hero subject pose, deliberate composition, refined presence"
         };
-        return labels[sceneType] || "بيئة إبداعية مخصصة";
     }
 
-    function buildPromptIntelligence(prompt, type, options) {
-        const config = options || {};
+    function inferPlace(prompt, sceneType, actionKey) {
+        const lower = prompt.toLowerCase();
+        if (/street|city|road|شارع|مدينة|طريق/.test(lower)) return "شارع حضري حديث";
+        if (/office|desk|meeting|مكتب|شركة|اجتماع/.test(lower)) return "مكتب احترافي فاخر";
+        if (/corridor|hallway|ممر/.test(lower)) return "ممر داخلي أنيق";
+        if (/car|vehicle|سيارة/.test(lower)) return "داخل سيارة فاخرة";
+        if (/restaurant|cafe|مطعم|مقهى/.test(lower)) return "مساحة ضيافة راقية";
+        if (/studio|استوديو/.test(lower)) return "استوديو نظيف بإضاءة مضبوطة";
+        if (/beach|sea|بحر|شاطئ/.test(lower)) return "واجهة بحرية مفتوحة";
+        if (/mountain|جبال|جبل/.test(lower)) return "خلفية جبلية واسعة";
+
+        if (sceneType === "car") return actionKey === "driving" ? "طريق مدينة حديث" : "مساحة عرض سيارات فاخرة";
+        if (sceneType === "portrait") return actionKey === "running" ? "شارع حضري حديث" : "جلسة تصوير احترافية";
+        if (sceneType === "product") return "استوديو إعلاني نظيف";
+        if (sceneType === "building") return "محيط معماري فاخر";
+        if (sceneType === "food") return "طاولة مطعم أنيقة";
+        if (sceneType === "landscape") return "مشهد خارجي واسع";
+        return actionKey === "running" ? "شارع حضري حديث" : "بيئة إبداعية مخصصة";
+    }
+
+    function inferAppearance(prompt, subject, sceneType) {
+        const lower = prompt.toLowerCase();
+        if (/businessman|رجل أعمال|رجل اعمال/.test(lower)) return "بدلة رسمية مفصلة بعناية ومظهر فاخر";
+        if (/formal|رسمي|بدلة/.test(lower)) return "إطلالة رسمية أنيقة";
+        if (/luxury|فاخر|فخمة/.test(lower)) return "تفاصيل فاخرة وملمس premium";
+        if (/sport|رياضي/.test(lower)) return "إطلالة رياضية عملية";
+        if (sceneType === "product") return "خامات نظيفة ولمعان احترافي";
+        if (sceneType === "portrait") return `${subject} بمظهر احترافي واضح`;
+        return "تفاصيل متوازنة ومظهر واضح";
+    }
+
+    function inferMood(prompt, styleConfig, sceneType) {
+        const lower = prompt.toLowerCase();
+        if (/luxury|فاخر|فخمة|premium/.test(lower)) return "فاخر";
+        if (/fast|speed|يجري|يركض|dynamic|حركة/.test(lower)) return "ديناميكي";
+        if (/tense|متوتر|serious|جدي/.test(lower)) return "متوتر";
+        if (/calm|هادئ|soft/.test(lower)) return "هادئ";
+        if (sceneType === "product") return "إعلاني نظيف";
+        return styleConfig.mood;
+    }
+
+    function inferShotType(prompt, styleKey, cameraAnglePreset) {
+        const lower = prompt.toLowerCase();
+        if (/ad|advert|commercial|إعلان|إعلاني/.test(lower) || styleKey === "commercial") return "إعلاني";
+        if (/cinematic|سينمائي/.test(lower) || styleKey === "cinematic") return "سينمائي";
+        if (/realistic|واقعي/.test(lower) || styleKey === "realistic") return "واقعي";
+        if (/anime|أنمي/.test(lower) || styleKey === "anime") return "أنمي";
+        if (cameraAnglePreset === "wide") return "سينمائي";
+        return "واقعي";
+    }
+
+    function translatePlaceToEnglish(place) {
+        const map = {
+            "شارع حضري حديث": "modern city street",
+            "مكتب احترافي فاخر": "luxury executive office",
+            "ممر داخلي أنيق": "elegant interior corridor",
+            "داخل سيارة فاخرة": "inside a premium car",
+            "طريق مدينة حديث": "modern city road",
+            "استوديو إعلاني نظيف": "clean commercial studio",
+            "جلسة تصوير احترافية": "professional portrait setup",
+            "محيط معماري فاخر": "premium architectural environment",
+            "طاولة مطعم أنيقة": "elegant restaurant table",
+            "مشهد خارجي واسع": "wide outdoor environment",
+            "بيئة إبداعية مخصصة": "custom premium environment",
+            "واجهة بحرية مفتوحة": "open beach front",
+            "خلفية جبلية واسعة": "wide mountain backdrop",
+            "مساحة عرض سيارات فاخرة": "luxury car display environment",
+            "مساحة ضيافة راقية": "premium hospitality environment"
+        };
+        return map[place] || place;
+    }
+
+    function translateAppearanceToEnglish(appearance) {
+        const map = {
+            "بدلة رسمية مفصلة بعناية ومظهر فاخر": "tailored formal suit, premium luxury styling",
+            "إطلالة رسمية أنيقة": "elegant formal appearance",
+            "تفاصيل فاخرة وملمس premium": "luxury details, premium finish",
+            "إطلالة رياضية عملية": "practical sporty styling",
+            "خامات نظيفة ولمعان احترافي": "clean premium materials, polished highlights",
+            "تفاصيل متوازنة ومظهر واضح": "balanced details, clean clear styling"
+        };
+        return map[appearance] || appearance;
+    }
+
+    function buildPromptIntelligence(prompt, type, options = {}) {
         const keywords = extractKeywords(prompt);
         const isVideo = type === "video";
         const isShort = prompt.length < 40;
         const sceneType = detectSceneType(prompt);
-        const finalTimeOfDay = pickTimeOfDay(prompt, config.timeOfDay);
-        const styleKey = config.visualStyle || "realistic";
+        const styleKey = options.visualStyle || "realistic";
         const styleConfig = getStyleConfig(styleKey);
-        const cameraAnglePreset = config.cameraAnglePreset || "medium";
-        const outputQuality = config.outputQuality || "high";
-        const subject = inferSubject(keywords, sceneType);
-        const environment = inferEnvironment(prompt, sceneType);
-        const timeOfDayLabel = getTimeLabel(finalTimeOfDay);
+        const cameraAnglePreset = options.cameraAnglePreset || "medium";
+        const outputQuality = options.outputQuality || "high";
+        const timeOfDay = pickTimeOfDay(prompt, options.timeOfDay || "auto");
+        const timeOfDayLabel = getTimeLabel(timeOfDay);
+        const action = detectAction(prompt, sceneType);
+        const subject = inferSubject(keywords, sceneType, prompt);
+        const place = inferPlace(prompt, sceneType, action.key);
+        const appearance = inferAppearance(prompt, subject, sceneType);
+        const mood = inferMood(prompt, styleConfig, sceneType);
+        const shotType = inferShotType(prompt, styleKey, cameraAnglePreset);
         const styleLabel = styleConfig.label;
         const cameraAngleLabel = getCameraLabel(cameraAnglePreset);
         const qualityLabel = getQualityLabel(outputQuality);
-        const lighting = finalTimeOfDay === "night" ? styleConfig.lightingNight : styleConfig.lightingDay;
-        const aspectRatio = isVideo ? "16:9" : cameraAnglePreset === "close" ? "4:5" : "1:1";
+        const lighting = timeOfDay === "night" ? styleConfig.lightingNight : styleConfig.lightingDay;
+        const aspectRatio = isVideo ? "16:9" : cameraAnglePreset === "close" ? "4:5" : cameraAnglePreset === "wide" ? "16:10" : "1:1";
         const motionHint = isVideo
-            ? "smooth camera motion, scene-aware pacing, refined movement arcs"
-            : "single polished frame with export-ready composition";
-        const title = `${subject} ${isVideo ? "فيديو" : "صورة"}`;
-        const notes = [
-            isShort ? "أضف مزيدًا من التفاصيل للخلفية والإضاءة للحصول على نتيجة أغنى." : "تم فهم الوصف وإعادة ترتيبه في Prompt أوضح.",
-            `تم التعرف على نوع المشهد: ${environment}.`,
-            config.timeOfDay === "auto" ? "تم اختيار الوقت الأنسب تلقائيًا حسب الوصف." : `تم تثبيت الوقت على ${timeOfDayLabel}.`
-        ];
+            ? `${action.prompt}, smooth camera motion, scene-aware pacing, controlled movement`
+            : action.key === "running"
+                ? "dynamic still frame, subtle motion blur, premium export clarity"
+                : "single polished frame with export-ready composition";
+        const autoCompleted = [];
+        const lower = prompt.toLowerCase();
+
+        if (!/street|city|road|office|desk|meeting|car|vehicle|restaurant|studio|beach|sea|mountain|شارع|مدينة|طريق|مكتب|سيارة|مطعم|استوديو|بحر|جبل/.test(lower)) {
+            autoCompleted.push(`أكمل النظام المكان إلى: ${place}`);
+        }
+        if (!/formal|suit|luxury|sport|رسمي|بدلة|فاخر|رياضي/.test(lower) && sceneType !== "product") {
+            autoCompleted.push(`أضاف النظام المظهر إلى: ${appearance}`);
+        }
+        if (!/run|running|يجري|يركض|sit|sitting|يجلس|drive|driving|يقود|walk|walking|يمشي|stand|standing|يقف|واقف/.test(lower)) {
+            autoCompleted.push(`استنتج النظام الفعل إلى: ${action.label}`);
+        }
+        if ((options.timeOfDay || "auto") === "auto") {
+            autoCompleted.push(`حدد النظام الوقت الأنسب إلى: ${timeOfDayLabel}`);
+        }
+        if (!/cinematic|سينمائي|realistic|واقعي|anime|أنمي|commercial|إعلاني|advert/.test(lower)) {
+            autoCompleted.push(`حدد النظام نوع اللقطة إلى: ${shotType}`);
+        }
 
         return {
             originalPrompt: prompt,
-            title,
+            title: `${subject} ${isVideo ? "فيديو" : "صورة"}`,
             sceneType,
             keywords,
             subject,
-            environment,
-            suggestedStyles: [styleLabel],
+            character: subject,
+            action: action.label,
+            actionKey: action.key,
+            place,
+            environment: place,
+            appearance,
+            shotType,
+            suggestedStyles: [styleLabel, shotType],
             styleLabel,
             visualStyle: styleKey,
             qualityLevel: isShort ? "needs-detail" : "enhanced",
@@ -389,111 +530,162 @@
             cameraAngle: getCameraDescription(cameraAnglePreset),
             cameraAnglePreset,
             cameraAngleLabel,
-            timeOfDay: finalTimeOfDay,
+            timeOfDay,
             timeOfDayLabel,
             motionHint,
             lighting,
-            mood: styleConfig.mood,
-            notes,
+            mood,
+            autoCompleted,
+            extracted: {
+                who: subject,
+                action: action.label,
+                where: place,
+                when: timeOfDayLabel,
+                look: appearance,
+                shotType
+            },
+            notes: [
+                isShort
+                    ? "الوصف كان مختصرًا، لذلك أضاف النظام تفاصيل منطقية قبل إنشاء النتيجة."
+                    : "تم تفكيك الوصف إلى عناصر مشهد ثم إعادة بنائه بصيغة تصويرية أوضح.",
+                `العنصر الرئيسي: ${subject}، الفعل: ${action.label}، المكان: ${place}.`,
+                `الإضاءة النهائية: ${lighting}.`,
+                `الإخراج النهائي: ${shotType}، الزاوية: ${cameraAngleLabel}، الجودة: ${qualityLabel}.`
+            ],
             visualTheme: {
                 style: styleKey,
-                palette: finalTimeOfDay === "night" ? styleConfig.paletteNight : styleConfig.paletteDay
+                palette: timeOfDay === "night" ? styleConfig.paletteNight : styleConfig.paletteDay
             },
             enhancedPrompt: [
-                prompt,
-                styleConfig.prompt,
+                `A ${shotType.toLowerCase()} ${subject === "رجل أعمال" ? "businessman" : sceneType === "product" ? "premium product hero" : "main subject"}`,
+                action.prompt,
+                `in ${translatePlaceToEnglish(place)}`,
+                translateAppearanceToEnglish(appearance),
                 lighting,
                 getCameraDescription(cameraAnglePreset),
                 getQualityDescription(outputQuality),
-                finalTimeOfDay === "night" ? "night atmosphere" : "daylight atmosphere",
-                environment,
-                isVideo ? "text to video scene planning, controlled motion, consistent pacing" : "high resolution still image, export ready"
+                mood === "فاخر" ? "luxury mood" : mood === "ديناميكي" ? "dynamic mood" : `${shotType.toLowerCase()} mood`,
+                timeOfDay === "night" ? "night atmosphere" : "daylight atmosphere",
+                styleConfig.prompt,
+                isVideo
+                    ? "text to video scene planning, temporal consistency, controlled motion"
+                    : "high resolution still image, premium export ready"
             ].join(", "),
-            recommendedOutputCount: 1,
-            downloadName: `${slugify(title)}-${styleKey}-${finalTimeOfDay}.svg`
+            recommendedOutputCount: isVideo ? 1 : 3,
+            downloadName: `${slugify(subject)}-${styleKey}-${timeOfDay}.svg`
         };
     }
 
-    function renderSceneSvg(sceneType, palette, accent) {
-        if (sceneType === "car") {
+    function renderEnvironmentSvg(intelligence, palette, variationOffset) {
+        const offset = variationOffset * 26;
+        if (intelligence.sceneType === "building" || intelligence.place.includes("مكتب")) {
             return [
-                `<rect x="250" y="510" width="520" height="90" rx="30" fill="${accent}" fill-opacity="0.72"/>`,
-                `<rect x="360" y="455" width="250" height="72" rx="24" fill="rgba(255,255,255,0.28)"/>`,
-                `<circle cx="360" cy="620" r="46" fill="#102a43"/>`,
-                `<circle cx="660" cy="620" r="46" fill="#102a43"/>`
+                `<rect x="${170 + offset}" y="250" width="160" height="390" fill="${palette[2]}" fill-opacity="0.44"/>`,
+                `<rect x="${360 + offset}" y="180" width="200" height="460" fill="rgba(255,255,255,0.18)"/>`,
+                `<rect x="${610 + offset}" y="230" width="180" height="410" fill="${palette[1]}" fill-opacity="0.3"/>`
             ].join("");
         }
-        if (sceneType === "portrait") {
+        if (intelligence.sceneType === "landscape") {
             return [
-                `<circle cx="520" cy="320" r="92" fill="rgba(255,255,255,0.82)"/>`,
-                `<path d="M360 570 C390 455 650 455 680 570 L680 620 L360 620 Z" fill="${accent}" fill-opacity="0.72"/>`
+                `<path d="M110 660 L300 400 L460 560 L680 330 L930 660 Z" fill="${palette[2]}" fill-opacity="0.42"/>`,
+                `<path d="M70 660 L280 470 L470 660 Z" fill="rgba(255,255,255,0.18)"/>`
             ].join("");
         }
-        if (sceneType === "product") {
-            return [
-                `<ellipse cx="540" cy="620" rx="180" ry="34" fill="rgba(255,255,255,0.18)"/>`,
-                `<rect x="430" y="320" width="220" height="260" rx="28" fill="rgba(255,255,255,0.86)"/>`,
-                `<rect x="470" y="260" width="140" height="90" rx="24" fill="${accent}" fill-opacity="0.65"/>`
-            ].join("");
-        }
-        if (sceneType === "building") {
-            return [
-                `<rect x="260" y="280" width="120" height="320" fill="${accent}" fill-opacity="0.66"/>`,
-                `<rect x="410" y="220" width="150" height="380" fill="rgba(255,255,255,0.3)"/>`,
-                `<rect x="590" y="170" width="160" height="430" fill="${palette[2]}" fill-opacity="0.68"/>`
-            ].join("");
-        }
-        if (sceneType === "food") {
-            return [
-                `<ellipse cx="540" cy="610" rx="210" ry="42" fill="rgba(255,255,255,0.18)"/>`,
-                `<path d="M390 520 C420 360 660 360 690 520 Z" fill="${accent}" fill-opacity="0.72"/>`,
-                `<rect x="430" y="520" width="220" height="36" rx="18" fill="rgba(255,255,255,0.82)"/>`
-            ].join("");
-        }
-        if (sceneType === "landscape") {
-            return [
-                `<path d="M150 620 L330 360 L480 560 L620 300 L860 620 Z" fill="${accent}" fill-opacity="0.68"/>`,
-                `<path d="M80 620 L280 430 L470 620 Z" fill="rgba(255,255,255,0.28)"/>`
-            ].join("");
+        if (intelligence.sceneType === "product" || intelligence.sceneType === "food") {
+            return `<ellipse cx="600" cy="700" rx="320" ry="64" fill="rgba(255,255,255,0.12)"/>`;
         }
         return [
-            `<circle cx="430" cy="380" r="150" fill="rgba(255,255,255,0.18)"/>`,
-            `<rect x="360" y="280" width="360" height="240" rx="40" fill="${accent}" fill-opacity="0.52"/>`
+            `<rect x="0" y="620" width="1200" height="280" fill="rgba(11,25,40,0.16)"/>`,
+            `<rect x="${120 + offset}" y="340" width="120" height="240" fill="rgba(255,255,255,0.08)"/>`,
+            `<rect x="${280 + offset}" y="280" width="150" height="300" fill="${palette[2]}" fill-opacity="0.18"/>`,
+            `<rect x="${470 + offset}" y="360" width="120" height="220" fill="rgba(255,255,255,0.08)"/>`,
+            `<rect x="${640 + offset}" y="240" width="180" height="340" fill="${palette[1]}" fill-opacity="0.14"/>`
         ].join("");
     }
 
-    function buildMockAsset(prompt, type, intelligence) {
-        const palette = intelligence.visualTheme?.palette || ["#f4d35e", "#ee964b", "#0d3b66"];
-        const label = type === "video" ? "VIDEO PREVIEW" : "IMAGE PREVIEW";
-        const safePrompt = escapeXml(prompt.length > 84 ? `${prompt.slice(0, 81)}...` : prompt);
+    function renderHumanFigure(actionKey, variationOffset, accent) {
+        const bodyX = 540 + variationOffset * 28 + (actionKey === "running" ? -34 : 0);
+        const armSpread = actionKey === "running" ? 86 : actionKey === "walking" ? 62 : 48;
+        const legSpread = actionKey === "running" ? 74 : actionKey === "walking" ? 48 : 28;
+        const torsoTilt = actionKey === "running" ? -24 : actionKey === "walking" ? -10 : 0;
+        const rightArmRotate = actionKey === "running" ? 42 : actionKey === "walking" ? 24 : 12;
+        const leftArmRotate = actionKey === "running" ? -36 : actionKey === "walking" ? -22 : -12;
+        const rightLegRotate = actionKey === "running" ? 26 : actionKey === "walking" ? 12 : 5;
+        const leftLegRotate = actionKey === "running" ? -18 : actionKey === "walking" ? -10 : -3;
+        const motionLines = actionKey === "running" || actionKey === "walking"
+            ? `<path d="M250 500 C340 470 420 450 ${bodyX - 160} 430" stroke="rgba(255,255,255,0.24)" stroke-width="14" stroke-linecap="round" fill="none"/>
+               <path d="M250 560 C340 530 420 520 ${bodyX - 150} 510" stroke="rgba(255,255,255,0.14)" stroke-width="10" stroke-linecap="round" fill="none"/>`
+            : "";
+
+        return [
+            `<g transform="translate(${bodyX} 0) rotate(${torsoTilt} 600 470)">`,
+            `<circle cx="600" cy="300" r="72" fill="rgba(255,255,255,0.84)"/>`,
+            `<rect x="548" y="372" width="104" height="220" rx="42" fill="${accent}" fill-opacity="0.8"/>`,
+            `<rect x="${600 - armSpread}" y="402" width="34" height="150" rx="16" fill="rgba(255,255,255,0.72)" transform="rotate(${leftArmRotate} 600 430)"/>`,
+            `<rect x="${572 + armSpread / 2}" y="402" width="34" height="150" rx="16" fill="rgba(255,255,255,0.72)" transform="rotate(${rightArmRotate} 600 430)"/>`,
+            `<rect x="${564 - legSpread / 2}" y="572" width="32" height="190" rx="16" fill="#102a43" transform="rotate(${leftLegRotate} 600 590)"/>`,
+            `<rect x="${604 + legSpread / 2}" y="572" width="32" height="190" rx="16" fill="#102a43" transform="rotate(${rightLegRotate} 600 590)"/>`,
+            `</g>`,
+            motionLines
+        ].join("");
+    }
+
+    function renderSubjectSvg(intelligence, palette, variationOffset) {
         const accent = palette[1];
+        if (intelligence.sceneType === "car" || intelligence.actionKey === "driving") {
+            const offset = variationOffset * 12;
+            return [
+                `<rect x="${230 + offset}" y="545" width="580" height="96" rx="36" fill="${accent}" fill-opacity="0.78"/>`,
+                `<rect x="${350 + offset}" y="475" width="260" height="88" rx="28" fill="rgba(255,255,255,0.26)"/>`,
+                `<circle cx="${340 + offset}" cy="655" r="50" fill="#102a43"/>`,
+                `<circle cx="${680 + offset}" cy="655" r="50" fill="#102a43"/>`,
+                `<circle cx="${470 + offset}" cy="448" r="26" fill="rgba(255,255,255,0.34)"/>`
+            ].join("");
+        }
+        if (intelligence.sceneType === "product") {
+            const offset = variationOffset * 10;
+            return [
+                `<rect x="${440 + offset}" y="300" width="220" height="300" rx="40" fill="rgba(255,255,255,0.86)"/>`,
+                `<rect x="${485 + offset}" y="240" width="130" height="92" rx="24" fill="${accent}" fill-opacity="0.66"/>`,
+                `<rect x="${505 + offset}" y="360" width="90" height="170" rx="16" fill="${palette[2]}" fill-opacity="0.26"/>`
+            ].join("");
+        }
+        if (intelligence.sceneType === "food") {
+            const center = 560 + variationOffset * 34;
+            return [
+                `<ellipse cx="${center}" cy="640" rx="210" ry="56" fill="rgba(255,255,255,0.78)"/>`,
+                `<path d="M${center - 150} 590 C${center - 120} 430 ${center + 120} 430 ${center + 150} 590 Z" fill="${accent}" fill-opacity="0.72"/>`,
+                `<ellipse cx="${center}" cy="540" rx="120" ry="44" fill="rgba(255,255,255,0.2)"/>`
+            ].join("");
+        }
+        return renderHumanFigure(intelligence.actionKey, variationOffset, accent);
+    }
+
+    function buildMockAsset(prompt, type, intelligence, options = {}) {
+        const palette = intelligence.visualTheme?.palette || ["#f4d35e", "#ee964b", "#0d3b66"];
+        const variationIndex = Number(options.variationIndex || 0);
         const celestial = intelligence.timeOfDay === "night"
-            ? `<circle cx="980" cy="160" r="72" fill="rgba(255,255,255,0.72)"/><circle cx="1010" cy="142" r="66" fill="${palette[0]}"/>`
-            : `<circle cx="980" cy="160" r="82" fill="rgba(255,245,196,0.78)"/>`;
+            ? `<circle cx="${980 - variationIndex * 18}" cy="160" r="74" fill="rgba(255,255,255,0.68)"/><circle cx="${1008 - variationIndex * 18}" cy="142" r="66" fill="${palette[0]}"/>`
+            : `<circle cx="${970 - variationIndex * 18}" cy="168" r="86" fill="rgba(255,245,196,0.82)"/>`;
         const motionLines = type === "video"
-            ? `<path d="M820 470 C930 420 1010 430 1090 410" stroke="rgba(255,255,255,0.4)" stroke-width="14" stroke-linecap="round" fill="none"/>
-               <path d="M790 530 C900 480 990 490 1080 470" stroke="rgba(255,255,255,0.25)" stroke-width="10" stroke-linecap="round" fill="none"/>`
+            ? `<path d="M760 490 C860 430 970 440 1090 400" stroke="rgba(255,255,255,0.28)" stroke-width="16" stroke-linecap="round" fill="none"/>
+               <path d="M760 560 C880 500 980 505 1080 470" stroke="rgba(255,255,255,0.16)" stroke-width="10" stroke-linecap="round" fill="none"/>`
             : "";
         const svgMarkup = [
             `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">`,
-            `<defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">`,
+            `<defs><linearGradient id="g-${variationIndex}" x1="0%" y1="0%" x2="100%" y2="100%">`,
             `<stop offset="0%" stop-color="${palette[0]}"/>`,
             `<stop offset="50%" stop-color="${palette[1]}"/>`,
             `<stop offset="100%" stop-color="${palette[2]}"/>`,
             `</linearGradient></defs>`,
-            `<rect width="1200" height="900" fill="url(#g)"/>`,
+            `<rect width="1200" height="900" fill="url(#g-${variationIndex})"/>`,
             celestial,
-            `<rect x="86" y="96" width="1028" height="640" rx="38" fill="rgba(8,18,32,0.28)" stroke="rgba(255,255,255,0.22)"/>`,
-            renderSceneSvg(intelligence.sceneType, palette, accent),
+            `<rect x="70" y="88" width="1060" height="700" rx="42" fill="rgba(8,18,32,0.18)" stroke="rgba(255,255,255,0.16)"/>`,
+            renderEnvironmentSvg(intelligence, palette, variationIndex),
+            renderSubjectSvg(intelligence, palette, variationIndex),
             motionLines,
-            `<rect x="90" y="760" width="1020" height="96" rx="26" fill="rgba(255,255,255,0.14)"/>`,
-            `<text x="130" y="182" fill="#ffffff" font-size="54" font-family="Arial" font-weight="700">${escapeXml(intelligence.title)}</text>`,
-            `<text x="130" y="240" fill="#ffffff" font-size="26" font-family="Arial">${label}</text>`,
-            `<text x="130" y="795" fill="#ffffff" font-size="24" font-family="Arial">${escapeXml(intelligence.styleLabel)} | ${escapeXml(intelligence.timeOfDayLabel)} | ${escapeXml(intelligence.qualityLabel)} | ${escapeXml(intelligence.cameraAngleLabel)}</text>`,
-            `<text x="130" y="832" fill="#ffffff" font-size="20" font-family="Arial">${safePrompt}</text>`,
             `</svg>`
         ].join("");
-
         return {
             svgMarkup,
             previewUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`,
@@ -507,7 +699,6 @@
         const headers = new Headers(options.headers || {});
         const body = options.body ? JSON.parse(options.body) : {};
         const pathname = new URL(url, window.location.href).pathname;
-
         if (pathname === "/api/admin/login" && method === "POST") {
             const username = normalizeText(body.username);
             const password = normalizeText(body.password);
@@ -646,9 +837,12 @@
                 throw createError(400, "الوصف مطلوب.");
             }
 
+            const variations = Math.max(1, Math.min(type === "image" ? Number(body.variations || 1) : 1, 3));
             if (type === "image") {
-                if (code.remainingImages <= 0) throw createError(409, "لا يوجد رصيد صور متبقٍ.");
-                code.remainingImages -= 1;
+                if (code.remainingImages < variations) {
+                    throw createError(409, variations > 1 ? "الرصيد الحالي لا يكفي لإنشاء 3 نتائج." : "لا يوجد رصيد صور متبقٍ.");
+                }
+                code.remainingImages -= variations;
             } else {
                 const duration = Number(body.duration || 0);
                 if (code.remainingVideos <= 0) throw createError(409, "لا يوجد رصيد فيديو متبقٍ.");
@@ -662,51 +856,73 @@
                 cameraAnglePreset: normalizeText(body.cameraAnglePreset || "medium").toLowerCase(),
                 outputQuality: normalizeText(body.outputQuality || "high").toLowerCase()
             });
-            const asset = buildMockAsset(prompt, type, intelligence);
-            const work = {
-                id: store.nextWorkId++,
-                codeId: code.id,
-                code: code.code,
-                title: intelligence.title,
-                prompt,
-                originalPrompt: prompt,
-                enhancedPrompt: intelligence.enhancedPrompt,
-                type,
-                duration: type === "video" ? Number(body.duration || 0) : null,
-                fileUrl: asset.previewUrl,
-                previewUrl: asset.previewUrl,
-                svgMarkup: asset.svgMarkup,
-                downloadName: asset.downloadName,
-                saved: Boolean(code.allowSave),
-                sourceWorkId: null,
-                qualityLevel: intelligence.qualityLevel,
-                outputQuality: intelligence.outputQuality,
-                qualityLabel: intelligence.qualityLabel,
-                styleSuggestions: intelligence.suggestedStyles,
-                visualStyle: intelligence.visualStyle,
-                styleLabel: intelligence.styleLabel,
-                timeOfDay: intelligence.timeOfDay,
-                timeOfDayLabel: intelligence.timeOfDayLabel,
-                cameraAnglePreset: intelligence.cameraAnglePreset,
-                cameraAngleLabel: intelligence.cameraAngleLabel,
-                sceneType: intelligence.sceneType,
-                processingPriority: code.processingPriority || "normal",
-                createdAt: nowIso()
-            };
 
-            store.works.unshift(work);
+            const createdWorks = [];
+            for (let index = 0; index < variations; index += 1) {
+                const variationIntelligence = {
+                    ...intelligence,
+                    title: variations > 1
+                        ? `${intelligence.subject} ${type === "video" ? "فيديو" : "صورة"} - نسخة ${index + 1}`
+                        : intelligence.title,
+                    downloadName: `${slugify(intelligence.subject)}-${intelligence.visualStyle}-${intelligence.timeOfDay}-${index + 1}.svg`
+                };
+                const asset = buildMockAsset(prompt, type, variationIntelligence, { variationIndex: index });
+                const work = {
+                    id: store.nextWorkId++,
+                    codeId: code.id,
+                    code: code.code,
+                    title: variationIntelligence.title,
+                    prompt,
+                    originalPrompt: prompt,
+                    enhancedPrompt: variationIntelligence.enhancedPrompt,
+                    type,
+                    duration: type === "video" ? Number(body.duration || 0) : null,
+                    fileUrl: asset.previewUrl,
+                    previewUrl: asset.previewUrl,
+                    svgMarkup: asset.svgMarkup,
+                    downloadName: asset.downloadName,
+                    saved: Boolean(code.allowSave),
+                    sourceWorkId: null,
+                    qualityLevel: variationIntelligence.qualityLevel,
+                    outputQuality: variationIntelligence.outputQuality,
+                    qualityLabel: variationIntelligence.qualityLabel,
+                    styleSuggestions: variationIntelligence.suggestedStyles,
+                    visualStyle: variationIntelligence.visualStyle,
+                    styleLabel: variationIntelligence.styleLabel,
+                    timeOfDay: variationIntelligence.timeOfDay,
+                    timeOfDayLabel: variationIntelligence.timeOfDayLabel,
+                    cameraAnglePreset: variationIntelligence.cameraAnglePreset,
+                    cameraAngleLabel: variationIntelligence.cameraAngleLabel,
+                    sceneType: variationIntelligence.sceneType,
+                    extracted: variationIntelligence.extracted,
+                    autoCompleted: variationIntelligence.autoCompleted,
+                    processingPriority: code.processingPriority || "normal",
+                    variationIndex: index,
+                    variationCount: variations,
+                    createdAt: nowIso()
+                };
+                createdWorks.unshift(work);
+                store.works.unshift(work);
+            }
+
             code.updatedAt = nowIso();
-            addEvent(store, code, "content-generated", `تم إنشاء ${type === "video" ? "فيديو" : "صورة"} جديدة بعنوان "${intelligence.title}".`, {
-                type,
-                title: intelligence.title
-            });
+            addEvent(
+                store,
+                code,
+                "content-generated",
+                variations > 1
+                    ? `تم إنشاء ${variations} نتائج ${type === "video" ? "فيديو" : "صور"} بعنوان "${intelligence.subject}".`
+                    : `تم إنشاء ${type === "video" ? "فيديو" : "صورة"} جديدة بعنوان "${intelligence.subject}".`,
+                { type, title: intelligence.subject, variations }
+            );
             saveStore(store);
 
             return {
                 success: true,
                 data: {
                     code: serializeCode(store, code),
-                    work: serializeWork(work),
+                    work: serializeWork(createdWorks[0]),
+                    works: createdWorks.map(serializeWork),
                     saved: Boolean(code.allowSave),
                     intelligence,
                     mockOutput: true

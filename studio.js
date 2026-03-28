@@ -25,7 +25,9 @@ const studioState = {
         outputQuality: "high"
     },
     lastPayload: null,
-    lastIntelligence: null
+    lastIntelligence: null,
+    latestBatch: [],
+    loadingTimer: null
 };
 
 const studioElements = {
@@ -41,9 +43,11 @@ const studioElements = {
     durationOptions: document.getElementById("duration-options"),
     durationValue: document.getElementById("duration-value"),
     generateButton: document.getElementById("generate-button"),
+    generateThreeButton: document.getElementById("generate-three-button"),
     analyzeButton: document.getElementById("analyze-button"),
     assistant: document.getElementById("assistant-output"),
     latest: document.getElementById("latest-result"),
+    latestBatch: document.getElementById("latest-batch"),
     libraryLink: document.getElementById("library-link"),
     worksGrid: document.getElementById("works-grid"),
     workFilters: [...document.querySelectorAll("[data-work-filter]")],
@@ -51,6 +55,10 @@ const studioElements = {
     activityPreview: document.getElementById("activity-preview"),
     suggestionButtons: [...document.querySelectorAll("[data-template]")],
     controlSegments: [...document.querySelectorAll("[data-control-group]")],
+    generationProgress: document.getElementById("generation-progress"),
+    generationStatus: document.getElementById("generation-status"),
+    generationProgressValue: document.getElementById("generation-progress-value"),
+    generationProgressBar: document.getElementById("generation-progress-bar"),
     openAdmin: document.getElementById("open-admin-panel"),
     closeAdmin: document.getElementById("close-admin-panel"),
     adminOverlay: document.getElementById("admin-overlay"),
@@ -134,9 +142,7 @@ function getCodeFromLocation() {
 }
 
 function formatDate(value) {
-    if (!value) {
-        return "غير محدد";
-    }
+    if (!value) return "غير محدد";
     return new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
@@ -160,7 +166,32 @@ function humanPriority(priority) {
 }
 
 function findWorkById(id) {
-    return studioState.works.find((work) => String(work.id) === String(id));
+    return studioState.works.find((work) => String(work.id) === String(id))
+        || studioState.latestBatch.find((work) => String(work.id) === String(id));
+}
+
+function buildControlsPayload(overrides = {}) {
+    return {
+        timeOfDay: overrides.timeOfDay || studioState.controls.timeOfDay,
+        visualStyle: overrides.visualStyle || studioState.controls.visualStyle,
+        cameraAnglePreset: overrides.cameraAnglePreset || studioState.controls.cameraAnglePreset,
+        outputQuality: overrides.outputQuality || studioState.controls.outputQuality
+    };
+}
+
+function buildGenerationPayload(overrides = {}) {
+    const payload = {
+        code: studioState.code,
+        prompt: typeof overrides.prompt === "string" ? overrides.prompt : studioElements.prompt.value.trim(),
+        type: overrides.type || studioElements.type.value,
+        variations: Number(overrides.variations || 1),
+        ...buildControlsPayload(overrides)
+    };
+    if (payload.type === "video") {
+        payload.duration = Number(overrides.duration || studioElements.durationValue.value);
+        payload.variations = 1;
+    }
+    return payload;
 }
 
 function renderCreateBalance(code) {
@@ -212,6 +243,8 @@ function updateMode() {
     const isVideo = studioElements.type.value === "video";
     studioElements.durationGroup.classList.toggle("hidden", !isVideo);
     studioElements.generateButton.textContent = isVideo ? "إنشاء فيديو" : "إنشاء صورة";
+    studioElements.generateThreeButton.disabled = isVideo;
+    studioElements.generateThreeButton.textContent = isVideo ? "3 نتائج للصورة فقط" : "إنشاء 3 نتائج";
 }
 
 function updateControlSegments() {
@@ -220,68 +253,96 @@ function updateControlSegments() {
     });
 }
 
-function buildControlsPayload(overrides = {}) {
-    return {
-        timeOfDay: overrides.timeOfDay || studioState.controls.timeOfDay,
-        visualStyle: overrides.visualStyle || studioState.controls.visualStyle,
-        cameraAnglePreset: overrides.cameraAnglePreset || studioState.controls.cameraAnglePreset,
-        outputQuality: overrides.outputQuality || studioState.controls.outputQuality
-    };
+function setBusyState(isBusy) {
+    studioElements.generateButton.disabled = isBusy;
+    studioElements.generateThreeButton.disabled = isBusy || studioElements.type.value === "video";
+    studioElements.analyzeButton.disabled = isBusy;
 }
 
-function buildGenerationPayload(overrides = {}) {
-    const payload = {
-        code: studioState.code,
-        prompt: typeof overrides.prompt === "string" ? overrides.prompt : studioElements.prompt.value.trim(),
-        type: overrides.type || studioElements.type.value,
-        ...buildControlsPayload(overrides)
-    };
-    if (payload.type === "video") {
-        payload.duration = Number(overrides.duration || studioElements.durationValue.value);
-    }
-    return payload;
+function startLoading(sequence) {
+    const steps = sequence || [
+        { progress: 18, text: "جاري فهم الوصف وتحليل العناصر..." },
+        { progress: 45, text: "جاري إكمال التفاصيل الناقصة وبناء المشهد..." },
+        { progress: 72, text: "جاري تجهيز النتيجة النهائية..." }
+    ];
+    clearInterval(studioState.loadingTimer);
+    studioElements.generationProgress.classList.remove("hidden");
+    let index = 0;
+    studioElements.generationStatus.textContent = steps[0].text;
+    studioElements.generationProgressValue.textContent = `${steps[0].progress}%`;
+    studioElements.generationProgressBar.style.width = `${steps[0].progress}%`;
+    studioState.loadingTimer = setInterval(() => {
+        index = Math.min(index + 1, steps.length - 1);
+        studioElements.generationStatus.textContent = steps[index].text;
+        studioElements.generationProgressValue.textContent = `${steps[index].progress}%`;
+        studioElements.generationProgressBar.style.width = `${steps[index].progress}%`;
+        if (index === steps.length - 1) {
+            clearInterval(studioState.loadingTimer);
+        }
+    }, 700);
+}
+
+function finishLoading(text = "تم التنفيذ بنجاح.") {
+    clearInterval(studioState.loadingTimer);
+    studioElements.generationStatus.textContent = text;
+    studioElements.generationProgressValue.textContent = "100%";
+    studioElements.generationProgressBar.style.width = "100%";
+    setTimeout(() => {
+        studioElements.generationProgress.classList.add("hidden");
+    }, 900);
 }
 
 function renderAssistant(data) {
+    const extracted = data.extracted || {};
     const keywords = Array.isArray(data.keywords) && data.keywords.length ? data.keywords : ["-"];
-    const styles = Array.isArray(data.suggestedStyles) && data.suggestedStyles.length ? data.suggestedStyles : ["-"];
     const notes = Array.isArray(data.notes) && data.notes.length ? data.notes : ["لا توجد ملاحظات إضافية."];
+    const completed = Array.isArray(data.autoCompleted) && data.autoCompleted.length ? data.autoCompleted : ["الوصف مكتمل بشكل جيد."];
     studioElements.assistant.innerHTML = `
+        <div class="analysis-grid">
+            <div class="insight-card"><span class="insight-label">من هو؟</span><strong>${escapeHtml(extracted.who || "-")}</strong></div>
+            <div class="insight-card"><span class="insight-label">ماذا يفعل؟</span><strong>${escapeHtml(extracted.action || "-")}</strong></div>
+            <div class="insight-card"><span class="insight-label">أين؟</span><strong>${escapeHtml(extracted.where || "-")}</strong></div>
+            <div class="insight-card"><span class="insight-label">متى؟</span><strong>${escapeHtml(extracted.when || "-")}</strong></div>
+            <div class="insight-card"><span class="insight-label">كيف يبدو؟</span><strong>${escapeHtml(extracted.look || "-")}</strong></div>
+            <div class="insight-card"><span class="insight-label">نوع اللقطة</span><strong>${escapeHtml(extracted.shotType || data.styleLabel || "-")}</strong></div>
+        </div>
         <div class="insights-grid">
-            <div class="insight-card">
-                <span class="insight-label">فهم النص</span>
-                <strong>${escapeHtml(data.subject || "المشهد الرئيسي")}</strong>
-                <p>${escapeHtml(data.environment || "بيئة غير محددة")} | ${escapeHtml(data.mood || "-")}</p>
+            <div class="enhanced-box">
+                <span class="insight-label">الوصف الأصلي</span>
+                <p>${escapeHtml(data.originalPrompt || "")}</p>
             </div>
-            <div class="insight-card">
-                <span class="insight-label">الوقت والستايل</span>
-                <strong>${escapeHtml(data.timeOfDayLabel || "-")} | ${escapeHtml(data.styleLabel || styles[0])}</strong>
-                <p>${escapeHtml(data.lighting || "-")} | ${escapeHtml(data.cameraAngleLabel || data.cameraAngle || "-")}</p>
+            <div class="enhanced-box">
+                <span class="insight-label">الوصف المحسن</span>
+                <p>${escapeHtml(data.enhancedPrompt || "-")}</p>
             </div>
         </div>
         <div class="insights-grid">
-            <div class="insight-card">
-                <span class="insight-label">الكلمات المفتاحية</span>
-                <strong>${escapeHtml(keywords.join(" / "))}</strong>
-                <p>${escapeHtml(styles.join(" / "))}</p>
+            <div class="enhanced-box">
+                <span class="insight-label">ما الذي أُكمل تلقائيًا؟</span>
+                <p>${escapeHtml(completed.join(" | "))}</p>
             </div>
-            <div class="insight-card">
-                <span class="insight-label">الإخراج النهائي</span>
-                <strong>${escapeHtml(data.qualityLabel || data.qualityLevel || "-")}</strong>
-                <p>${escapeHtml(data.aspectRatio || "-")} | ${escapeHtml(data.motionHint || "-")}</p>
+            <div class="enhanced-box">
+                <span class="insight-label">كلمات مفتاحية ومخرجات</span>
+                <p>${escapeHtml(keywords.join(" / "))}</p>
+                <p>${escapeHtml(`${data.timeOfDayLabel || "-"} | ${data.styleLabel || "-"} | ${data.cameraAngleLabel || "-"} | ${data.qualityLabel || "-"}`)}</p>
             </div>
         </div>
-        <div class="enhanced-box"><span class="insight-label">الوصف الأصلي</span><p>${escapeHtml(data.originalPrompt || studioElements.prompt.value.trim())}</p></div>
-        <div class="enhanced-box"><span class="insight-label">الوصف المحسن</span><p>${escapeHtml(data.enhancedPrompt || "-")}</p></div>
-        <div class="enhanced-box"><span class="insight-label">ملاحظات المساعد</span><p>${escapeHtml(notes.join(" | "))}</p></div>
+        <div class="enhanced-box">
+            <span class="insight-label">ملخص التحليل</span>
+            <p>${escapeHtml(notes.join(" | "))}</p>
+        </div>
     `;
 }
 
 function buildResultActions(work) {
     const regenButtons = studioState.meta?.allowRegenerate ? `
         <button class="card-button" type="button" data-result-action="regenerate">إعادة توليد</button>
-        <button class="card-button" type="button" data-result-action="highres">نسخة بجودة عالية</button>
-    ` : "";
+        <button class="card-button" type="button" data-result-action="hd">تحميل HD</button>
+        <button class="card-button" type="button" data-result-action="4k">تحميل 4K</button>
+    ` : `
+        <button class="card-button" type="button" data-result-action="hd">تحميل HD</button>
+        <button class="card-button" type="button" data-result-action="4k">تحميل 4K</button>
+    `;
     return `
         <button class="card-button" type="button" data-result-action="preview">عرض</button>
         <button class="card-button" type="button" data-result-action="download">تحميل</button>
@@ -298,8 +359,8 @@ function renderLatest(work, intelligence) {
     studioElements.latest.innerHTML = `
         <div class="section-head">
             <div>
-                <p class="section-kicker">النتيجة الأخيرة</p>
-                <h3>تم الإنشاء بنجاح</h3>
+                <p class="section-kicker">النتيجة الأحدث</p>
+                <h3>تم إنشاء النتيجة بنجاح</h3>
             </div>
         </div>
         <article class="result-showcase">
@@ -326,6 +387,43 @@ function renderLatest(work, intelligence) {
     `;
 }
 
+function renderLatestBatch(works) {
+    if (!works || works.length <= 1) {
+        studioElements.latestBatch.classList.add("hidden");
+        studioElements.latestBatch.innerHTML = "";
+        return;
+    }
+    studioElements.latestBatch.classList.remove("hidden");
+    studioElements.latestBatch.innerHTML = `
+        <div class="section-head">
+            <div>
+                <p class="section-kicker">دفعة النتائج</p>
+                <h3>3 نتائج مختلفة من نفس الفكرة</h3>
+            </div>
+        </div>
+        <div class="batch-grid">
+            ${works.map((work) => `
+                <article class="batch-card">
+                    <img src="${escapeHtml(window.CreditsWorkAssets.resolveUrl(work))}" alt="${escapeHtml(work.title)}">
+                    <div class="work-content">
+                        <div class="work-topline">
+                            <span class="mini-badge">${escapeHtml(work.type === "video" ? "فيديو" : "صورة")}</span>
+                            <span class="work-meta">${formatDate(work.createdAt)}</span>
+                        </div>
+                        <strong>${escapeHtml(work.title)}</strong>
+                        <p class="work-meta">${escapeHtml(`${work.styleLabel || "-"} | ${work.timeOfDayLabel || "-"} | ${work.qualityLabel || "-"}`)}</p>
+                        <div class="work-actions">
+                            <button class="card-button" type="button" data-work-action="preview" data-work-id="${escapeHtml(work.id)}">عرض</button>
+                            <button class="card-button" type="button" data-work-action="download" data-work-id="${escapeHtml(work.id)}">تحميل</button>
+                            <button class="card-button" type="button" data-work-action="hd" data-work-id="${escapeHtml(work.id)}">HD</button>
+                        </div>
+                    </div>
+                </article>
+            `).join("")}
+        </div>
+    `;
+}
+
 function renderWorks() {
     let works = [...studioState.works];
     if (studioState.workFilter !== "all") {
@@ -349,6 +447,7 @@ function renderWorks() {
                 <div class="work-actions">
                     <button class="card-button" type="button" data-work-action="preview" data-work-id="${escapeHtml(work.id)}">عرض</button>
                     <button class="card-button" type="button" data-work-action="download" data-work-id="${escapeHtml(work.id)}">تحميل</button>
+                    <button class="card-button" type="button" data-work-action="4k" data-work-id="${escapeHtml(work.id)}">4K</button>
                 </div>
             </div>
         </article>
@@ -361,7 +460,6 @@ function renderActivityPreview() {
         studioElements.activityPreview.innerHTML = `<div class="empty-state">لا توجد عمليات مسجلة بعد.</div>`;
         return;
     }
-
     studioElements.activityPanel.classList.remove("hidden");
     studioElements.activityPreview.innerHTML = studioState.activity.slice(0, 5).map((event) => `
         <article class="timeline-item">
@@ -380,7 +478,6 @@ async function loadWorkspace() {
         window.location.href = "index.html";
         return;
     }
-
     sessionStorage.setItem("activeCreditsCode", studioState.code);
     studioElements.libraryLink.href = `library.html?code=${encodeURIComponent(studioState.code)}`;
     const [lookupResponse, activityResponse] = await Promise.all([
@@ -398,6 +495,71 @@ async function loadWorkspace() {
     renderWorks();
     renderActivityPreview();
     updateMode();
+}
+
+async function analyzePrompt() {
+    const prompt = studioElements.prompt.value.trim();
+    if (!prompt) {
+        setStudioMessage("اكتب وصفًا أولًا.", "error");
+        return null;
+    }
+    startLoading([
+        { progress: 24, text: "جاري استخراج من في المشهد..." },
+        { progress: 58, text: "جاري تحديد الفعل والمكان والوقت..." },
+        { progress: 84, text: "جاري بناء الوصف التصويري النهائي..." }
+    ]);
+    const response = await studioApi("/api/prompt-intelligence/analyze", {
+        method: "POST",
+        body: JSON.stringify({
+            prompt,
+            type: studioElements.type.value,
+            ...buildControlsPayload()
+        })
+    });
+    studioState.lastIntelligence = response.data;
+    renderAssistant(response.data);
+    finishLoading("تم تحليل الوصف بنجاح.");
+    setStudioMessage("تم تحليل الوصف وتحسينه.", "success");
+    return response.data;
+}
+
+async function performGeneration(variations = 1, overrides = {}) {
+    const payload = buildGenerationPayload({ ...overrides, variations });
+    if (!payload.prompt) {
+        setStudioMessage("اكتب وصفًا أولًا.", "error");
+        return;
+    }
+
+    setBusyState(true);
+    setStudioMessage(variations > 1 ? "جاري إنشاء 3 نتائج..." : "جاري إنشاء النتيجة...", "info");
+    startLoading([
+        { progress: 18, text: "جاري فهم الوصف وتقسيمه إلى عناصر..." },
+        { progress: 42, text: "جاري إكمال التفاصيل الناقصة وبناء المشهد..." },
+        { progress: 68, text: variations > 1 ? "جاري إنشاء أكثر من نتيجة من نفس الفكرة..." : "جاري إخراج النتيجة النهائية..." },
+        { progress: 88, text: "جاري تجهيز المعاينة والحفظ داخل المكتبة..." }
+    ]);
+
+    try {
+        const response = await studioApi("/api/content/generate", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        studioState.lastPayload = payload;
+        studioState.lastIntelligence = response.data.intelligence;
+        studioState.latestBatch = response.data.works || [response.data.work];
+        await loadWorkspace();
+        renderAssistant(response.data.intelligence);
+        renderLatest(studioState.latestBatch[0], response.data.intelligence);
+        renderLatestBatch(studioState.latestBatch);
+        finishLoading(variations > 1 ? "تم إنشاء 3 نتائج بنجاح." : "تم إنشاء النتيجة بنجاح.");
+        setStudioMessage(response.data.saved ? "تم إنشاء العمل وحفظه داخل المكتبة." : "تم إنشاء العمل.", "success");
+    } catch (error) {
+        clearInterval(studioState.loadingTimer);
+        studioElements.generationProgress.classList.add("hidden");
+        setStudioMessage(error.message, "error");
+    } finally {
+        setBusyState(false);
+    }
 }
 
 function openAdminOverlay() {
@@ -460,7 +622,6 @@ function renderAdminSelectedCode(detail) {
         studioElements.adminActivity.innerHTML = `<div class="empty-state">اختر كودًا لعرض السجل.</div>`;
         return;
     }
-
     studioElements.adminSelectedCode.innerHTML = `
         <div class="enhanced-box">
             <span class="insight-label">${escapeHtml(detail.code.code)}</span>
@@ -506,7 +667,6 @@ async function loadAdminSessionIfAny() {
         studioElements.adminDashboard.classList.add("hidden");
         return;
     }
-
     try {
         await adminApi("/api/admin/session");
         studioElements.adminAuthView.classList.add("hidden");
@@ -520,57 +680,22 @@ async function loadAdminSessionIfAny() {
     }
 }
 
-function setBusyState(isBusy) {
-    studioElements.generateButton.disabled = isBusy;
-    studioElements.analyzeButton.disabled = isBusy;
-}
-
-async function analyzePrompt() {
-    const prompt = studioElements.prompt.value.trim();
-    if (!prompt) {
-        setStudioMessage("اكتب وصفًا أولًا.", "error");
-        return null;
-    }
-
-    const response = await studioApi("/api/prompt-intelligence/analyze", {
-        method: "POST",
-        body: JSON.stringify({
-            prompt,
-            type: studioElements.type.value,
-            ...buildControlsPayload()
-        })
-    });
-
-    studioState.lastIntelligence = response.data;
-    renderAssistant(response.data);
-    setStudioMessage("تم تحليل الوصف وتحسينه.", "success");
-    return response.data;
-}
-
-async function performGeneration(overrides = {}) {
-    const payload = buildGenerationPayload(overrides);
-    if (!payload.prompt) {
-        setStudioMessage("اكتب وصفًا أولًا.", "error");
+function handleWorkAction(work, action) {
+    if (!work) return;
+    if (action === "preview") {
+        window.CreditsWorkAssets.preview(work);
         return;
     }
-
-    setBusyState(true);
-    setStudioMessage("جارٍ إنشاء النتيجة...", "info");
-    try {
-        const response = await studioApi("/api/content/generate", {
-            method: "POST",
-            body: JSON.stringify(payload)
-        });
-        studioState.lastPayload = payload;
-        studioState.lastIntelligence = response.data.intelligence;
-        await loadWorkspace();
-        renderAssistant(response.data.intelligence);
-        renderLatest(response.data.work, response.data.intelligence);
-        setStudioMessage(response.data.saved ? "تم إنشاء العمل وحفظه داخل المكتبة." : "تم إنشاء العمل.", "success");
-    } catch (error) {
-        setStudioMessage(error.message, "error");
-    } finally {
-        setBusyState(false);
+    if (action === "download") {
+        window.CreditsWorkAssets.download(work);
+        return;
+    }
+    if (action === "hd") {
+        window.CreditsWorkAssets.download(work, { suffix: "hd" });
+        return;
+    }
+    if (action === "4k") {
+        window.CreditsWorkAssets.download(work, { suffix: "4k" });
     }
 }
 
@@ -587,9 +712,7 @@ studioElements.type.addEventListener("change", updateMode);
 
 studioElements.durationOptions.addEventListener("click", (event) => {
     const button = event.target.closest("[data-duration]");
-    if (!button || button.disabled) {
-        return;
-    }
+    if (!button || button.disabled) return;
     studioElements.durationValue.value = button.dataset.duration;
     [...studioElements.durationOptions.querySelectorAll(".duration-chip")].forEach((chip) => chip.classList.remove("active"));
     button.classList.add("active");
@@ -613,18 +736,14 @@ studioElements.workFilters.forEach((button) => {
 
 studioElements.worksGrid.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-work-action]");
-    if (!trigger) {
-        return;
-    }
-    const work = findWorkById(trigger.dataset.workId);
-    if (!work) {
-        return;
-    }
-    if (trigger.dataset.workAction === "download") {
-        window.CreditsWorkAssets.download(work);
-        return;
-    }
-    window.CreditsWorkAssets.preview(work);
+    if (!trigger) return;
+    handleWorkAction(findWorkById(trigger.dataset.workId), trigger.dataset.workAction);
+});
+
+studioElements.latestBatch.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-work-action]");
+    if (!trigger) return;
+    handleWorkAction(findWorkById(trigger.dataset.workId), trigger.dataset.workAction);
 });
 
 studioElements.suggestionButtons.forEach((button) => {
@@ -638,6 +757,7 @@ studioElements.analyzeButton.addEventListener("click", async () => {
         setBusyState(true);
         await analyzePrompt();
     } catch (error) {
+        studioElements.generationProgress.classList.add("hidden");
         setStudioMessage(error.message, "error");
     } finally {
         setBusyState(false);
@@ -646,47 +766,32 @@ studioElements.analyzeButton.addEventListener("click", async () => {
 
 studioElements.form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await performGeneration();
+    await performGeneration(1);
+});
+
+studioElements.generateThreeButton.addEventListener("click", async () => {
+    await performGeneration(3);
 });
 
 studioElements.latest.addEventListener("click", async (event) => {
     const trigger = event.target.closest("[data-result-action]");
-    if (!trigger) {
-        return;
-    }
-
+    if (!trigger) return;
     const action = trigger.dataset.resultAction;
-    const work = studioState.works[0];
-    if (!work) {
-        return;
-    }
-
-    if (action === "preview") {
-        window.CreditsWorkAssets.preview(work);
-        return;
-    }
-    if (action === "download") {
-        window.CreditsWorkAssets.download(work);
-        return;
-    }
+    const work = studioState.latestBatch[0] || studioState.works[0];
+    if (!work) return;
     if (action === "saved") {
         window.location.href = `library.html?code=${encodeURIComponent(studioState.code)}`;
         return;
     }
-    if (!studioState.lastPayload) {
-        setStudioMessage("أنشئ نتيجة أولًا ثم أعد التوليد.", "error");
-        return;
-    }
     if (action === "regenerate") {
-        await performGeneration(studioState.lastPayload);
+        if (!studioState.lastPayload) {
+            setStudioMessage("أنشئ نتيجة أولًا ثم أعد التوليد.", "error");
+            return;
+        }
+        await performGeneration(1, studioState.lastPayload);
         return;
     }
-    if (action === "highres") {
-        await performGeneration({
-            ...studioState.lastPayload,
-            outputQuality: "ultra"
-        });
-    }
+    handleWorkAction(work, action);
 });
 
 studioElements.openAdmin.addEventListener("click", async () => {
@@ -804,14 +909,10 @@ studioElements.adminCreateForm.addEventListener("submit", async (event) => {
 
 studioElements.adminLogout.addEventListener("click", async () => {
     try {
-        await adminApi("/api/admin/logout", {
-            method: "POST",
-            body: JSON.stringify({})
-        });
+        await adminApi("/api/admin/logout", { method: "POST", body: JSON.stringify({}) });
     } catch (error) {
-        // ignore
+        // ignore local logout failures
     }
-
     studioState.adminToken = "";
     studioState.adminCodes = [];
     studioState.selectedAdminCode = null;
