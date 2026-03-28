@@ -135,6 +135,30 @@ function adminApi(url, options = {}) {
     });
 }
 
+async function improvePrompt(userPrompt) {
+    const response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prompt: userPrompt })
+    });
+
+    const raw = await response.text();
+    let payload = {};
+    try {
+        payload = raw ? JSON.parse(raw) : {};
+    } catch (error) {
+        throw new Error(raw || "تعذر قراءة استجابة Gemini.");
+    }
+
+    if (!response.ok) {
+        throw new Error(payload.message || payload.error || "تعذر تحسين الوصف عبر Gemini.");
+    }
+
+    return payload.prompt || userPrompt;
+}
+
 function getCodeFromLocation() {
     const params = new URLSearchParams(window.location.search);
     const codeFromUrl = params.get("code");
@@ -498,8 +522,8 @@ async function loadWorkspace() {
 }
 
 async function analyzePrompt() {
-    const prompt = studioElements.prompt.value.trim();
-    if (!prompt) {
+    const userPrompt = studioElements.prompt.value.trim();
+    if (!userPrompt) {
         setStudioMessage("اكتب وصفًا أولًا.", "error");
         return null;
     }
@@ -508,18 +532,30 @@ async function analyzePrompt() {
         { progress: 58, text: "جاري تحديد الفعل والمكان والوقت..." },
         { progress: 84, text: "جاري بناء الوصف التصويري النهائي..." }
     ]);
+    let improvedPrompt = userPrompt;
+    let usedGemini = false;
+    try {
+        improvedPrompt = await improvePrompt(userPrompt);
+        usedGemini = improvedPrompt !== userPrompt;
+    } catch (error) {
+        improvedPrompt = userPrompt;
+    }
     const response = await studioApi("/api/prompt-intelligence/analyze", {
         method: "POST",
         body: JSON.stringify({
-            prompt,
+            prompt: improvedPrompt,
             type: studioElements.type.value,
             ...buildControlsPayload()
         })
     });
+    response.data.originalPrompt = userPrompt;
+    if (usedGemini) {
+        response.data.notes = [...(response.data.notes || []), "تم تحسين الوصف أولًا عبر Gemini قبل التحليل الداخلي."];
+    }
     studioState.lastIntelligence = response.data;
     renderAssistant(response.data);
     finishLoading("تم تحليل الوصف بنجاح.");
-    setStudioMessage("تم تحليل الوصف وتحسينه.", "success");
+    setStudioMessage(usedGemini ? "تم تحسين الوصف عبر Gemini ثم تحليله." : "تم تحليل الوصف وتحسينه.", "success");
     return response.data;
 }
 
@@ -529,6 +565,7 @@ async function performGeneration(variations = 1, overrides = {}) {
         setStudioMessage("اكتب وصفًا أولًا.", "error");
         return;
     }
+    const userPrompt = payload.prompt;
 
     setBusyState(true);
     setStudioMessage(variations > 1 ? "جاري إنشاء 3 نتائج..." : "جاري إنشاء النتيجة...", "info");
@@ -540,6 +577,12 @@ async function performGeneration(variations = 1, overrides = {}) {
     ]);
 
     try {
+        try {
+            payload.prompt = await improvePrompt(userPrompt);
+        } catch (error) {
+            payload.prompt = userPrompt;
+        }
+        payload.originalPrompt = userPrompt;
         const response = await studioApi("/api/content/generate", {
             method: "POST",
             body: JSON.stringify(payload)

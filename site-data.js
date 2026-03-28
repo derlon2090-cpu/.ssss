@@ -833,6 +833,7 @@
             ensureCodeCanGenerate(code);
             const type = normalizeText(body.type || "image").toLowerCase();
             const prompt = normalizeText(body.prompt);
+            const originalPrompt = normalizeText(body.originalPrompt) || prompt;
             if (!prompt) {
                 throw createError(400, "الوصف مطلوب.");
             }
@@ -872,8 +873,8 @@
                     codeId: code.id,
                     code: code.code,
                     title: variationIntelligence.title,
-                    prompt,
-                    originalPrompt: prompt,
+                    prompt: originalPrompt,
+                    originalPrompt,
                     enhancedPrompt: variationIntelligence.enhancedPrompt,
                     type,
                     duration: type === "video" ? Number(body.duration || 0) : null,
@@ -936,6 +937,9 @@
     async function fallbackFetch(input, init = {}) {
         const url = typeof input === "string" ? input : input.url;
         const parsed = new URL(url, window.location.href);
+        if (parsed.pathname === "/api/gemini") {
+            return window.__creditsOriginalFetch(input, init);
+        }
         if (!parsed.pathname.startsWith("/api/")) {
             return window.__creditsOriginalFetch(input, init);
         }

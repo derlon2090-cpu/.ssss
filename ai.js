@@ -2,6 +2,9 @@ const crypto = require("crypto");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const geminiHandler = require("./api/gemini");
+
+loadEnvFile(path.join(__dirname, ".env"));
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -27,6 +30,31 @@ const ADMIN_SECURITY_CODE = process.env.ADMIN_SECURITY_CODE || "";
 const adminSessions = new Map();
 
 const store = loadStore();
+
+function loadEnvFile(envPath) {
+    if (!fs.existsSync(envPath)) {
+        return;
+    }
+
+    const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) {
+            continue;
+        }
+
+        const separatorIndex = trimmed.indexOf("=");
+        if (separatorIndex === -1) {
+            continue;
+        }
+
+        const key = trimmed.slice(0, separatorIndex).trim();
+        const value = trimmed.slice(separatorIndex + 1).trim();
+        if (key && process.env[key] === undefined) {
+            process.env[key] = value;
+        }
+    }
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -917,6 +945,8 @@ app.get("/api/health", (req, res) => {
         }
     });
 });
+
+app.post("/api/gemini", geminiHandler);
 
 app.post("/api/admin/login", wrap((req, res) => {
     const username = normalizeOptionalText(req.body.username);

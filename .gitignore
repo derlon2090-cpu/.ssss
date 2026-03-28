@@ -1,3 +1,5 @@
 node_modules/
 generated-*.svg
 npm-debug.log*
+.env
+.env.local
