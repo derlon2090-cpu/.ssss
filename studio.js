@@ -1,27 +1,10 @@
 const adminTokenKey = "creditsAdminToken";
 
 const controlLabels = {
-    timeOfDay: {
-        auto: "تلقائي",
-        day: "نهار",
-        night: "ليل"
-    },
-    visualStyle: {
-        realistic: "واقعي",
-        cinematic: "سينمائي",
-        commercial: "إعلاني",
-        anime: "أنمي"
-    },
-    cameraAnglePreset: {
-        close: "قريبة",
-        medium: "متوسطة",
-        wide: "واسعة"
-    },
-    outputQuality: {
-        normal: "عادية",
-        high: "عالية",
-        ultra: "فائقة"
-    }
+    timeOfDay: { auto: "تلقائي", day: "نهار", night: "ليل" },
+    visualStyle: { realistic: "واقعي", cinematic: "سينمائي", commercial: "إعلاني", anime: "أنمي" },
+    cameraAnglePreset: { close: "قريبة", medium: "متوسطة", wide: "واسعة" },
+    outputQuality: { normal: "عادية", high: "عالية", ultra: "فائقة" }
 };
 
 const studioState = {
@@ -122,7 +105,6 @@ async function studioApi(url, options = {}) {
 
     const raw = await response.text();
     let payload = {};
-
     try {
         payload = raw ? JSON.parse(raw) : {};
     } catch (error) {
@@ -155,36 +137,30 @@ function formatDate(value) {
     if (!value) {
         return "غير محدد";
     }
-
-    return new Intl.DateTimeFormat("ar-SA", {
-        dateStyle: "medium",
-        timeStyle: "short"
-    }).format(new Date(value));
-}
-
-function getLabel(group, value) {
-    return controlLabels[group]?.[value] || value || "-";
+    return new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 function humanStatus(status) {
-    const labels = {
+    return {
         active: "فعال",
         inactive: "موقوف",
         expired: "منتهي",
         scheduled: "مجدول",
         consumed: "مستهلك"
-    };
-    return labels[status] || status || "-";
+    }[status] || status || "-";
 }
 
 function humanPriority(priority) {
-    const labels = {
+    return {
         low: "منخفضة",
         normal: "عادية",
         high: "عالية",
         vip: "VIP"
-    };
-    return labels[priority] || priority || "-";
+    }[priority] || priority || "-";
+}
+
+function findWorkById(id) {
+    return studioState.works.find((work) => String(work.id) === String(id));
 }
 
 function renderCreateBalance(code) {
@@ -197,10 +173,7 @@ function renderCreateBalance(code) {
 
 function renderSummary(code) {
     const badgeName = code.clientName || code.name || code.badgeLabel;
-    studioElements.headerCodeBadge.innerHTML = `
-        <strong>${escapeHtml(code.code)}</strong>
-        <span>${escapeHtml(badgeName)}</span>
-    `;
+    studioElements.headerCodeBadge.innerHTML = `<strong>${escapeHtml(code.code)}</strong><span>${escapeHtml(badgeName)}</span>`;
     renderCreateBalance(code);
     studioElements.codeSummary.innerHTML = `
         <div class="summary-headline">
@@ -243,9 +216,7 @@ function updateMode() {
 
 function updateControlSegments() {
     studioElements.controlSegments.forEach((button) => {
-        const group = button.dataset.controlGroup;
-        const value = button.dataset.controlValue;
-        button.classList.toggle("active", studioState.controls[group] === value);
+        button.classList.toggle("active", studioState.controls[button.dataset.controlGroup] === button.dataset.controlValue);
     });
 }
 
@@ -265,11 +236,9 @@ function buildGenerationPayload(overrides = {}) {
         type: overrides.type || studioElements.type.value,
         ...buildControlsPayload(overrides)
     };
-
     if (payload.type === "video") {
         payload.duration = Number(overrides.duration || studioElements.durationValue.value);
     }
-
     return payload;
 }
 
@@ -277,13 +246,12 @@ function renderAssistant(data) {
     const keywords = Array.isArray(data.keywords) && data.keywords.length ? data.keywords : ["-"];
     const styles = Array.isArray(data.suggestedStyles) && data.suggestedStyles.length ? data.suggestedStyles : ["-"];
     const notes = Array.isArray(data.notes) && data.notes.length ? data.notes : ["لا توجد ملاحظات إضافية."];
-
     studioElements.assistant.innerHTML = `
         <div class="insights-grid">
             <div class="insight-card">
                 <span class="insight-label">فهم النص</span>
                 <strong>${escapeHtml(data.subject || "المشهد الرئيسي")}</strong>
-                <p>${escapeHtml(data.environment || "بيئة غير محددة بعد")} | ${escapeHtml(data.mood || "-")}</p>
+                <p>${escapeHtml(data.environment || "بيئة غير محددة")} | ${escapeHtml(data.mood || "-")}</p>
             </div>
             <div class="insight-card">
                 <span class="insight-label">الوقت والستايل</span>
@@ -303,41 +271,29 @@ function renderAssistant(data) {
                 <p>${escapeHtml(data.aspectRatio || "-")} | ${escapeHtml(data.motionHint || "-")}</p>
             </div>
         </div>
-        <div class="enhanced-box">
-            <span class="insight-label">الوصف الأصلي</span>
-            <p>${escapeHtml(data.originalPrompt || studioElements.prompt.value.trim())}</p>
-        </div>
-        <div class="enhanced-box">
-            <span class="insight-label">الوصف المحسن</span>
-            <p>${escapeHtml(data.enhancedPrompt || "-")}</p>
-        </div>
-        <div class="enhanced-box">
-            <span class="insight-label">ملاحظات المساعد</span>
-            <p>${escapeHtml(notes.join(" | "))}</p>
-        </div>
+        <div class="enhanced-box"><span class="insight-label">الوصف الأصلي</span><p>${escapeHtml(data.originalPrompt || studioElements.prompt.value.trim())}</p></div>
+        <div class="enhanced-box"><span class="insight-label">الوصف المحسن</span><p>${escapeHtml(data.enhancedPrompt || "-")}</p></div>
+        <div class="enhanced-box"><span class="insight-label">ملاحظات المساعد</span><p>${escapeHtml(notes.join(" | "))}</p></div>
     `;
 }
 
 function buildResultActions(work) {
-    const regenerateButton = studioState.meta?.allowRegenerate ? `
+    const regenButtons = studioState.meta?.allowRegenerate ? `
         <button class="card-button" type="button" data-result-action="regenerate">إعادة توليد</button>
         <button class="card-button" type="button" data-result-action="highres">نسخة بجودة عالية</button>
     ` : "";
-
     return `
-        <a class="card-button" href="${escapeHtml(work.fileUrl)}" target="_blank" rel="noreferrer">تحميل / عرض</a>
+        <button class="card-button" type="button" data-result-action="preview">عرض</button>
+        <button class="card-button" type="button" data-result-action="download">تحميل</button>
         <a class="card-button" href="library.html?code=${encodeURIComponent(studioState.code)}">مكتبة الأعمال</a>
         <button class="card-button" type="button" data-result-action="saved">${work.saved ? "محفوظ في المكتبة" : "غير محفوظ"}</button>
-        ${regenerateButton}
+        ${regenButtons}
     `;
 }
 
 function renderLatest(work, intelligence) {
     const typeLabel = work.type === "video" ? `فيديو ${work.duration || ""} ثانية` : "صورة";
-    const qualityLabel = work.qualityLabel || intelligence.qualityLabel || getLabel("outputQuality", work.outputQuality || "high");
-    const timeLabel = work.timeOfDayLabel || intelligence.timeOfDayLabel || "-";
-    const styleLabel = work.styleLabel || intelligence.styleLabel || "-";
-
+    const qualityLabel = work.qualityLabel || intelligence.qualityLabel || controlLabels.outputQuality[work.outputQuality] || "-";
     studioElements.latest.classList.remove("hidden");
     studioElements.latest.innerHTML = `
         <div class="section-head">
@@ -348,27 +304,23 @@ function renderLatest(work, intelligence) {
         </div>
         <article class="result-showcase">
             <div class="result-preview-frame">
-                <img src="${escapeHtml(work.previewUrl)}" alt="${escapeHtml(typeLabel)}">
+                <img src="${escapeHtml(window.CreditsWorkAssets.resolveUrl(work))}" alt="${escapeHtml(typeLabel)}">
             </div>
             <div class="result-copy">
                 <div class="work-topline">
                     <span class="mini-badge">${escapeHtml(typeLabel)}</span>
                     <span class="work-meta">${formatDate(work.createdAt)}</span>
                 </div>
+                <strong>${escapeHtml(work.title || "عمل جديد")}</strong>
                 <p class="work-prompt">${escapeHtml(work.originalPrompt || work.prompt)}</p>
                 <div class="result-meta-grid">
-                    <div class="insight-card compact-card"><span class="insight-label">الوقت</span><strong>${escapeHtml(timeLabel)}</strong></div>
-                    <div class="insight-card compact-card"><span class="insight-label">الستايل</span><strong>${escapeHtml(styleLabel)}</strong></div>
+                    <div class="insight-card compact-card"><span class="insight-label">الوقت</span><strong>${escapeHtml(work.timeOfDayLabel || intelligence.timeOfDayLabel || "-")}</strong></div>
+                    <div class="insight-card compact-card"><span class="insight-label">الستايل</span><strong>${escapeHtml(work.styleLabel || intelligence.styleLabel || "-")}</strong></div>
                     <div class="insight-card compact-card"><span class="insight-label">الجودة</span><strong>${escapeHtml(qualityLabel)}</strong></div>
                     <div class="insight-card compact-card"><span class="insight-label">زاوية التصوير</span><strong>${escapeHtml(work.cameraAngleLabel || intelligence.cameraAngleLabel || "-")}</strong></div>
                 </div>
-                <div class="enhanced-box">
-                    <span class="insight-label">الوصف المحسن</span>
-                    <p>${escapeHtml(work.enhancedPrompt || intelligence.enhancedPrompt || "-")}</p>
-                </div>
-                <div class="work-actions result-actions">
-                    ${buildResultActions(work)}
-                </div>
+                <div class="enhanced-box"><span class="insight-label">الوصف المحسن</span><p>${escapeHtml(work.enhancedPrompt || intelligence.enhancedPrompt || "-")}</p></div>
+                <div class="work-actions result-actions">${buildResultActions(work)}</div>
             </div>
         </article>
     `;
@@ -379,15 +331,15 @@ function renderWorks() {
     if (studioState.workFilter !== "all") {
         works = works.filter((work) => work.type === studioState.workFilter);
     }
-
     studioElements.worksGrid.innerHTML = works.length ? works.slice(0, 6).map((work) => `
         <article class="work-card">
-            <img src="${escapeHtml(work.previewUrl)}" alt="${escapeHtml(work.type)}">
+            <img src="${escapeHtml(window.CreditsWorkAssets.resolveUrl(work))}" alt="${escapeHtml(work.type)}">
             <div class="work-content">
                 <div class="work-topline">
                     <span class="mini-badge">${work.type === "video" ? `فيديو ${work.duration || ""} ثانية` : "صورة"}</span>
                     <span class="work-meta">${formatDate(work.createdAt)}</span>
                 </div>
+                <strong>${escapeHtml(work.title || "عمل جديد")}</strong>
                 <p class="work-prompt">${escapeHtml(work.prompt)}</p>
                 <div class="summary-list work-insights-list">
                     <span>الوقت: ${escapeHtml(work.timeOfDayLabel || "-")}</span>
@@ -395,7 +347,8 @@ function renderWorks() {
                     <span>الجودة: ${escapeHtml(work.qualityLabel || "-")}</span>
                 </div>
                 <div class="work-actions">
-                    <a class="card-button" href="${escapeHtml(work.fileUrl)}" target="_blank" rel="noreferrer">فتح</a>
+                    <button class="card-button" type="button" data-work-action="preview" data-work-id="${escapeHtml(work.id)}">عرض</button>
+                    <button class="card-button" type="button" data-work-action="download" data-work-id="${escapeHtml(work.id)}">تحميل</button>
                 </div>
             </div>
         </article>
@@ -430,7 +383,6 @@ async function loadWorkspace() {
 
     sessionStorage.setItem("activeCreditsCode", studioState.code);
     studioElements.libraryLink.href = `library.html?code=${encodeURIComponent(studioState.code)}`;
-
     const [lookupResponse, activityResponse] = await Promise.all([
         studioApi("/api/codes/lookup", {
             method: "POST",
@@ -438,11 +390,9 @@ async function loadWorkspace() {
         }),
         studioApi(`/api/codes/${encodeURIComponent(studioState.code)}/activity`)
     ]);
-
     studioState.meta = lookupResponse.data.code;
     studioState.works = lookupResponse.data.works || [];
     studioState.activity = activityResponse.data.activity || [];
-
     renderSummary(studioState.meta);
     renderDurations(studioState.meta);
     renderWorks();
@@ -520,7 +470,6 @@ function renderAdminSelectedCode(detail) {
             <p>${detail.code.allowSave ? "يحفظ الأعمال" : "بدون حفظ"} | ${detail.code.allowRegenerate ? "إعادة التوليد متاحة" : "إعادة التوليد معطلة"}</p>
         </div>
     `;
-
     studioElements.adminActivity.innerHTML = (detail.activity || []).length ? detail.activity.map((event) => `
         <article class="timeline-item">
             <div class="timeline-dot"></div>
@@ -600,7 +549,6 @@ async function analyzePrompt() {
 
 async function performGeneration(overrides = {}) {
     const payload = buildGenerationPayload(overrides);
-
     if (!payload.prompt) {
         setStudioMessage("اكتب وصفًا أولًا.", "error");
         return;
@@ -608,16 +556,13 @@ async function performGeneration(overrides = {}) {
 
     setBusyState(true);
     setStudioMessage("جارٍ إنشاء النتيجة...", "info");
-
     try {
         const response = await studioApi("/api/content/generate", {
             method: "POST",
             body: JSON.stringify(payload)
         });
-
         studioState.lastPayload = payload;
         studioState.lastIntelligence = response.data.intelligence;
-
         await loadWorkspace();
         renderAssistant(response.data.intelligence);
         renderLatest(response.data.work, response.data.intelligence);
@@ -645,7 +590,6 @@ studioElements.durationOptions.addEventListener("click", (event) => {
     if (!button || button.disabled) {
         return;
     }
-
     studioElements.durationValue.value = button.dataset.duration;
     [...studioElements.durationOptions.querySelectorAll(".duration-chip")].forEach((chip) => chip.classList.remove("active"));
     button.classList.add("active");
@@ -665,6 +609,22 @@ studioElements.workFilters.forEach((button) => {
         button.classList.add("active");
         renderWorks();
     });
+});
+
+studioElements.worksGrid.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-work-action]");
+    if (!trigger) {
+        return;
+    }
+    const work = findWorkById(trigger.dataset.workId);
+    if (!work) {
+        return;
+    }
+    if (trigger.dataset.workAction === "download") {
+        window.CreditsWorkAssets.download(work);
+        return;
+    }
+    window.CreditsWorkAssets.preview(work);
 });
 
 studioElements.suggestionButtons.forEach((button) => {
@@ -690,27 +650,37 @@ studioElements.form.addEventListener("submit", async (event) => {
 });
 
 studioElements.latest.addEventListener("click", async (event) => {
-    const actionButton = event.target.closest("[data-result-action]");
-    if (!actionButton) {
+    const trigger = event.target.closest("[data-result-action]");
+    if (!trigger) {
         return;
     }
 
-    const action = actionButton.dataset.resultAction;
+    const action = trigger.dataset.resultAction;
+    const work = studioState.works[0];
+    if (!work) {
+        return;
+    }
+
+    if (action === "preview") {
+        window.CreditsWorkAssets.preview(work);
+        return;
+    }
+    if (action === "download") {
+        window.CreditsWorkAssets.download(work);
+        return;
+    }
     if (action === "saved") {
         window.location.href = `library.html?code=${encodeURIComponent(studioState.code)}`;
         return;
     }
-
     if (!studioState.lastPayload) {
         setStudioMessage("أنشئ نتيجة أولًا ثم أعد التوليد.", "error");
         return;
     }
-
     if (action === "regenerate") {
         await performGeneration(studioState.lastPayload);
         return;
     }
-
     if (action === "highres") {
         await performGeneration({
             ...studioState.lastPayload,
@@ -734,7 +704,6 @@ studioElements.adminBackdrop.addEventListener("click", closeAdminOverlay);
 studioElements.adminInlineLogin.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(studioElements.adminInlineLogin);
-
     try {
         const response = await studioApi("/api/admin/login", {
             method: "POST",
@@ -759,9 +728,7 @@ studioElements.adminTabs.forEach((tab) => {
     tab.addEventListener("click", () => switchAdminTab(tab.dataset.adminTab));
 });
 
-studioElements.adminQuickCreate.addEventListener("click", () => {
-    switchAdminTab("create");
-});
+studioElements.adminQuickCreate.addEventListener("click", () => switchAdminTab("create"));
 
 studioElements.adminSearch.addEventListener("input", () => {
     studioState.adminSearch = studioElements.adminSearch.value.trim().toLowerCase();
@@ -780,7 +747,6 @@ studioElements.adminFilterButtons.forEach((button) => {
 studioElements.adminCodesGrid.addEventListener("click", async (event) => {
     const selectButton = event.target.closest("[data-admin-select]");
     const toggleButton = event.target.closest("[data-admin-toggle]");
-
     if (selectButton) {
         try {
             await openSelectedAdminCode(selectButton.dataset.adminSelect);
@@ -790,14 +756,11 @@ studioElements.adminCodesGrid.addEventListener("click", async (event) => {
         }
         return;
     }
-
     if (toggleButton) {
         try {
             await adminApi(`/api/admin/codes/${encodeURIComponent(toggleButton.dataset.adminToggle)}`, {
                 method: "PATCH",
-                body: JSON.stringify({
-                    isActive: toggleButton.dataset.active !== "true"
-                })
+                body: JSON.stringify({ isActive: toggleButton.dataset.active !== "true" })
             });
             await loadAdminCodes();
             setAdminMessage("تم تحديث حالة الكود.", "success");
@@ -846,7 +809,7 @@ studioElements.adminLogout.addEventListener("click", async () => {
             body: JSON.stringify({})
         });
     } catch (error) {
-        // Ignore logout response errors.
+        // ignore
     }
 
     studioState.adminToken = "";

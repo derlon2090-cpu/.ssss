@@ -14,6 +14,7 @@
                 <h2 class="topbar-title">مكتبة الأعمال وسجل الكود</h2>
             </div>
             <div class="topbar-actions">
+                <button class="ghost-button" type="button" data-theme-toggle data-theme-value="night">الوضع القمري</button>
                 <a id="back-to-studio-top" class="ghost-button inline-link" href="studio.html">العودة إلى الإنشاء</a>
                 <a class="primary-button inline-link" href="admin-login.html">دخول الأدمن</a>
             </div>
@@ -39,38 +40,38 @@
             <section class="panel">
                 <div class="section-head">
                     <div>
-                        <p class="section-kicker">Assets</p>
-                        <h2>مكتبة الأعمال</h2>
+                        <p class="section-kicker">المكتبة</p>
+                        <h2>الأعمال المحفوظة</h2>
                     </div>
                     <button id="refresh-library" class="ghost-button" type="button">تحديث</button>
                 </div>
+
                 <div class="chip-row">
                     <button class="filter-chip active" type="button" data-filter="all">الكل</button>
                     <button class="filter-chip" type="button" data-filter="image">صور</button>
                     <button class="filter-chip" type="button" data-filter="video">فيديو</button>
                 </div>
+
                 <div id="library-message" class="message"></div>
-                <div id="library-works" class="works-grid">
-                    <div class="empty-state">جارٍ تحميل المكتبة...</div>
-                </div>
+                <div id="library-summary" class="summary-card top-gap"></div>
+                <div id="library-works" class="works-grid top-gap"></div>
             </section>
 
             <section class="panel">
                 <div class="section-head">
                     <div>
-                        <p class="section-kicker">Activity</p>
-                        <h2>سجل العمليات</h2>
+                        <p class="section-kicker">السجل</p>
+                        <h2>آخر العمليات</h2>
                     </div>
                 </div>
-                <div id="library-summary" class="summary-card"></div>
-                <div id="activity-list" class="timeline-list">
-                    <div class="empty-state">جارٍ تحميل السجل...</div>
-                </div>
+                <div id="activity-list" class="timeline-list"></div>
             </section>
         </main>
     </div>
 
+    <script src="site-theme.js"></script>
     <script src="site-data.js"></script>
+    <script src="work-assets.js"></script>
     <script src="library.js"></script>
 </body>
 </html>

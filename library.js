@@ -24,7 +24,7 @@ function setLibraryMessage(text, type = "info") {
 }
 
 function escapeHtml(value) {
-    return String(value)
+    return String(value ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -73,6 +73,10 @@ function formatDate(value) {
     }).format(new Date(value));
 }
 
+function findWorkById(id) {
+    return libraryState.works.find((work) => String(work.id) === String(id));
+}
+
 function renderSummary() {
     const code = libraryState.meta;
     libraryElements.badgeText.textContent = `${code.badgeLabel} | ${code.code}`;
@@ -100,15 +104,22 @@ function renderWorks() {
 
     libraryElements.works.innerHTML = works.length ? works.map((work) => `
         <article class="work-card">
-            <img src="${escapeHtml(work.previewUrl)}" alt="${escapeHtml(work.type)}">
+            <img src="${escapeHtml(window.CreditsWorkAssets.resolveUrl(work))}" alt="${escapeHtml(work.title || work.type)}">
             <div class="work-content">
                 <div class="work-topline">
                     <span class="mini-badge">${work.type === "video" ? `فيديو ${work.duration || ""} ثانية` : "صورة"}</span>
                     <span class="work-meta">${formatDate(work.createdAt)}</span>
                 </div>
+                <strong>${escapeHtml(work.title || "عمل جديد")}</strong>
                 <p class="work-prompt">${escapeHtml(work.prompt)}</p>
+                <div class="summary-list work-insights-list">
+                    <span>الوقت: ${escapeHtml(work.timeOfDayLabel || "-")}</span>
+                    <span>الستايل: ${escapeHtml(work.styleLabel || "-")}</span>
+                    <span>الجودة: ${escapeHtml(work.qualityLabel || "-")}</span>
+                </div>
                 <div class="work-actions">
-                    <a class="card-button" href="${escapeHtml(work.fileUrl)}" target="_blank" rel="noreferrer">تحميل / عرض</a>
+                    <button class="card-button" type="button" data-work-action="preview" data-work-id="${escapeHtml(work.id)}">عرض</button>
+                    <button class="card-button" type="button" data-work-action="download" data-work-id="${escapeHtml(work.id)}">تحميل</button>
                 </div>
             </div>
         </article>
@@ -136,9 +147,8 @@ async function loadLibrary() {
 
     sessionStorage.setItem("activeCreditsCode", libraryState.code);
     libraryElements.backToStudio.href = `studio.html?code=${encodeURIComponent(libraryState.code)}`;
-    if (libraryElements.backToStudioTop) {
-        libraryElements.backToStudioTop.href = `studio.html?code=${encodeURIComponent(libraryState.code)}`;
-    }
+    libraryElements.backToStudioTop.href = `studio.html?code=${encodeURIComponent(libraryState.code)}`;
+
     const [lookupResponse, activityResponse] = await Promise.all([
         libraryApi("/api/codes/lookup", {
             method: "POST",
@@ -146,6 +156,7 @@ async function loadLibrary() {
         }),
         libraryApi(`/api/codes/${encodeURIComponent(libraryState.code)}/activity`)
     ]);
+
     libraryState.meta = lookupResponse.data.code;
     libraryState.works = lookupResponse.data.works || [];
     libraryState.activity = activityResponse.data.activity || [];
@@ -161,6 +172,25 @@ libraryElements.filters.forEach((button) => {
         button.classList.add("active");
         renderWorks();
     });
+});
+
+libraryElements.works.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-work-action]");
+    if (!trigger) {
+        return;
+    }
+
+    const work = findWorkById(trigger.dataset.workId);
+    if (!work) {
+        return;
+    }
+
+    if (trigger.dataset.workAction === "download") {
+        window.CreditsWorkAssets.download(work);
+        return;
+    }
+
+    window.CreditsWorkAssets.preview(work);
 });
 
 libraryElements.refresh.addEventListener("click", async () => {
