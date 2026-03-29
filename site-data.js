@@ -963,6 +963,19 @@
         }
 
         try {
+            const liveResponse = await window.__creditsOriginalFetch(input, init);
+            const contentType = (liveResponse.headers.get("content-type") || "").toLowerCase();
+            const isJsonApi = contentType.includes("application/json");
+            const isStaticNotFound = (liveResponse.status === 404 || liveResponse.status === 405) && !isJsonApi;
+
+            if (!isStaticNotFound) {
+                return liveResponse;
+            }
+        } catch (error) {
+            // Fall back to local storage mode when there is no reachable backend.
+        }
+
+        try {
             const payload = await handleRequest(url, init || {});
             return new Response(JSON.stringify(payload), {
                 status: 200,
