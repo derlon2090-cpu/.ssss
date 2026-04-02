@@ -1,3 +1,5 @@
+const SESSION_KEY = "falooers-session";
+
 const campaigns = [
   {
     id: 1,
@@ -106,6 +108,29 @@ const adminRoles = [
   }
 ];
 
+const promoSchedules = [
+  {
+    id: 1,
+    platform: "X / Twitter",
+    handle: "@storepulse_sa",
+    profileLink: "https://x.com/storepulse_sa",
+    storeLink: "https://store.example.com",
+    publishTime: "20:00",
+    copy: "عرض اليوم وصل. اطلب الآن من المتجر واستفد من الخصم قبل نهاية الليلة.",
+    status: "مجدول للمراجعة"
+  },
+  {
+    id: 2,
+    platform: "Instagram",
+    handle: "@storepulse.sa",
+    profileLink: "https://www.instagram.com/storepulse.sa",
+    storeLink: "https://store.example.com",
+    publishTime: "21:30",
+    copy: "منتجات مختارة بعناية وروابط شراء مباشرة داخل المتجر. اكتشف المجموعة الجديدة الآن.",
+    status: "جاهز للنشر عبر الربط الرسمي"
+  }
+];
+
 const discoveryGrid = document.getElementById("discoveryGrid");
 const filterButtons = document.querySelectorAll(".filter-chip");
 const toast = document.getElementById("toast");
@@ -118,6 +143,17 @@ const reachInput = document.getElementById("reachInput");
 const rewardInput = document.getElementById("rewardInput");
 const pitchInput = document.getElementById("pitchInput");
 const campaignForm = document.getElementById("campaignForm");
+
+const schedulerForm = document.getElementById("schedulerForm");
+const schedulePlatformInput = document.getElementById("schedulePlatformInput");
+const scheduleHandleInput = document.getElementById("scheduleHandleInput");
+const scheduleProfileInput = document.getElementById("scheduleProfileInput");
+const scheduleStoreInput = document.getElementById("scheduleStoreInput");
+const scheduleTimeInput = document.getElementById("scheduleTimeInput");
+const scheduleTextInput = document.getElementById("scheduleTextInput");
+const scheduleList = document.getElementById("scheduleList");
+const scheduledCountValue = document.getElementById("scheduledCountValue");
+const nextPublishValue = document.getElementById("nextPublishValue");
 
 const reachValue = document.getElementById("reachValue");
 const summaryHandle = document.getElementById("summaryHandle");
@@ -141,19 +177,7 @@ const heroReachValue = document.getElementById("heroReachValue");
 const heroVisitsValue = document.getElementById("heroVisitsValue");
 const heroSpentValue = document.getElementById("heroSpentValue");
 
-const authPortal = document.getElementById("auth-portal");
-const authLoginForm = document.getElementById("authLoginForm");
-const authEmailInput = document.getElementById("authEmailInput");
-const authPasswordInput = document.getElementById("authPasswordInput");
-const signupForm = document.getElementById("signupForm");
-const signupNameInput = document.getElementById("signupNameInput");
-const signupEmailInput = document.getElementById("signupEmailInput");
-const signupPasswordInput = document.getElementById("signupPasswordInput");
-const loginTabButton = document.getElementById("loginTabButton");
-const signupTabButton = document.getElementById("signupTabButton");
-const authStatus = document.getElementById("authStatus");
 const adminPanel = document.getElementById("admin-panel");
-const adminConsole = document.getElementById("adminConsole");
 const adminRoleTitle = document.getElementById("adminRoleTitle");
 const adminRoleText = document.getElementById("adminRoleText");
 const adminLogoutButton = document.getElementById("adminLogoutButton");
@@ -174,14 +198,6 @@ const memberConsentInput = document.getElementById("memberConsentInput");
 
 let availablePoints = 2480;
 let currentUser = null;
-let registeredUsers = [
-  {
-    name: "عضو تجريبي",
-    email: "user@falooers.local",
-    password: "User123!",
-    role: "member"
-  }
-];
 let activityFeed = [
   "تم اعتماد حملة @founder.ksa وربطها بفئة ريادة.",
   "أضاف الأدمن عضوًا جديدًا إلى قائمة الاستكشاف.",
@@ -280,14 +296,6 @@ function renderPermissions() {
       `;
     })
     .join("");
-}
-
-function setAuthMode(mode) {
-  const loginMode = mode === "login";
-  loginTabButton.classList.toggle("is-active", loginMode);
-  signupTabButton.classList.toggle("is-active", !loginMode);
-  authLoginForm.classList.toggle("is-hidden", !loginMode);
-  signupForm.classList.toggle("is-hidden", loginMode);
 }
 
 function renderCampaignCards(activeFilter = "الكل") {
@@ -421,6 +429,34 @@ function renderCampaignsTable() {
   });
 }
 
+function renderPromoSchedules() {
+  scheduleList.innerHTML = promoSchedules
+    .map((schedule) => {
+      return `
+        <article class="schedule-item">
+          <div class="schedule-item-head">
+            <div>
+              <span class="pill pill-success">${schedule.platform}</span>
+              <strong>${schedule.handle}</strong>
+            </div>
+            <span class="pill pill-warning">${schedule.publishTime}</span>
+          </div>
+          <p>${schedule.copy} ${schedule.storeLink}</p>
+          <div class="schedule-links">
+            <a href="${schedule.profileLink}" target="_blank" rel="noreferrer">فتح الحساب</a>
+            <a href="${schedule.storeLink}" target="_blank" rel="noreferrer">فتح المتجر</a>
+            <span class="pill pill-warning">${schedule.status}</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  scheduledCountValue.textContent = formatNumber(promoSchedules.length);
+  const sortedTimes = [...promoSchedules].map((schedule) => schedule.publishTime).sort();
+  nextPublishValue.textContent = sortedTimes[0] || "--:--";
+}
+
 function updateMetrics() {
   const approvedCampaigns = campaigns.filter((campaign) => campaign.status === "approved").length;
   const consentedMembers = members.filter((member) => member.consented).length;
@@ -457,22 +493,48 @@ function setAdminSession(roleKey) {
   adminRoleTitle.textContent = adminSession.title;
   adminRoleText.textContent = adminSession.description;
   adminPanel.classList.remove("is-admin-hidden");
-  authStatus.innerHTML = `<strong>الحالة الحالية:</strong><span>${adminSession.title}</span>`;
   currentUser = {
     name: adminSession.title,
     email: "admin@falooers.local",
     role: "admin"
   };
-  window.setTimeout(() => {
-    adminPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 120);
+  if (window.location.hash === "#admin-panel") {
+    window.setTimeout(() => {
+      adminPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  }
 }
 
 function setMemberSession(user) {
   currentUser = user;
   adminSession = null;
   adminPanel.classList.add("is-admin-hidden");
-  authStatus.innerHTML = `<strong>الحالة الحالية:</strong><span>${user.name}</span>`;
+}
+
+function readSession() {
+  const savedSession = localStorage.getItem(SESSION_KEY);
+  return savedSession ? JSON.parse(savedSession) : null;
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function applySessionState() {
+  const session = readSession();
+  if (!session) {
+    currentUser = null;
+    adminSession = null;
+    adminPanel.classList.add("is-admin-hidden");
+    return;
+  }
+
+  if (session.role === "admin") {
+    setAdminSession("super_admin");
+    return;
+  }
+
+  setMemberSession(session);
 }
 
 filterButtons.forEach((button) => {
@@ -532,82 +594,46 @@ campaignForm.addEventListener("submit", (event) => {
   renderCampaignsTable();
 });
 
-loginTabButton.addEventListener("click", () => {
-  setAuthMode("login");
-});
-
-signupTabButton.addEventListener("click", () => {
-  setAuthMode("signup");
-});
-
-authLoginForm.addEventListener("submit", (event) => {
+schedulerForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const email = authEmailInput.value.trim().toLowerCase();
-  const password = authPasswordInput.value;
-
-  if (email === "admin@falooers.local" && password === "Admin123!") {
-    setAdminSession("super_admin");
-    pushActivity("تم تسجيل دخول الأدمن إلى لوحة الإدارة بنجاح.");
-    showToast("تم تسجيل دخول الأدمن وتفعيل الصلاحيات المميزة.");
-    authLoginForm.reset();
+  if (!currentUser) {
+    showToast("سجّل الدخول أولًا من صفحة الدخول لإضافة خطة نشر.");
+    window.setTimeout(() => {
+      window.location.href = "login.html";
+    }, 700);
     return;
   }
 
-  const matchedUser = registeredUsers.find((user) => {
-    return user.email.toLowerCase() === email && user.password === password;
+  promoSchedules.unshift({
+    id: Date.now(),
+    platform: schedulePlatformInput.value,
+    handle: normalizeHandle(scheduleHandleInput.value),
+    profileLink: scheduleProfileInput.value.trim(),
+    storeLink: scheduleStoreInput.value.trim(),
+    publishTime: scheduleTimeInput.value,
+    copy: scheduleTextInput.value.trim(),
+    status: "مجدول للمراجعة"
   });
 
-  if (!matchedUser) {
-    showToast("بيانات الدخول غير صحيحة.");
-    return;
-  }
-
-  setMemberSession(matchedUser);
-  showToast(`مرحبًا ${matchedUser.name}، تم تسجيل الدخول بنجاح.`);
-  authLoginForm.reset();
-});
-
-signupForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const name = signupNameInput.value.trim();
-  const email = signupEmailInput.value.trim().toLowerCase();
-  const password = signupPasswordInput.value;
-
-  if (!name || !email || !password) {
-    showToast("أكمل بيانات إنشاء الحساب.");
-    return;
-  }
-
-  const userExists = registeredUsers.some((user) => user.email.toLowerCase() === email);
-  if (userExists || email === "admin@falooers.local") {
-    showToast("هذا البريد مستخدم بالفعل.");
-    return;
-  }
-
-  registeredUsers.unshift({
-    name,
-    email,
-    password,
-    role: "member"
-  });
-
-  authStatus.innerHTML = `<strong>الحالة الحالية:</strong><span>${name}</span>`;
-  showToast(`تم إنشاء الحساب ${name} بنجاح. يمكنك تسجيل الدخول الآن.`);
-  signupForm.reset();
-  setAuthMode("login");
+  pushActivity(`تمت إضافة خطة نشر يومية لحساب ${normalizeHandle(scheduleHandleInput.value)} على ${schedulePlatformInput.value}.`);
+  showToast("تمت إضافة خطة النشر اليومية إلى القائمة المنظمة.");
+  schedulerForm.reset();
+  scheduleTimeInput.value = "20:00";
+  renderPromoSchedules();
 });
 
 adminLogoutButton.addEventListener("click", () => {
   currentUser = null;
   adminSession = null;
-  authStatus.innerHTML = "<strong>الحالة الحالية:</strong><span>زائر</span>";
   adminRoleTitle.textContent = "Super Admin";
   adminRoleText.textContent = "يملك صلاحية اعتماد الحملات وإدارة الأعضاء وتعديل مستويات الثقة.";
   adminPanel.classList.add("is-admin-hidden");
-  authPortal.scrollIntoView({ behavior: "smooth", block: "start" });
+  clearSession();
   showToast("تم تسجيل الخروج من لوحة الأدمن.");
+  window.setTimeout(() => {
+    window.location.href = "login.html";
+  }, 600);
 });
 
 memberForm.addEventListener("submit", (event) => {
@@ -646,10 +672,11 @@ memberForm.addEventListener("submit", (event) => {
 });
 
 updateCampaignSummary();
-setAuthMode("login");
 renderPermissions();
 renderCampaignCards();
+renderPromoSchedules();
 renderMembersTable();
 renderCampaignsTable();
 renderActivityFeed();
+applySessionState();
 updateMetrics();

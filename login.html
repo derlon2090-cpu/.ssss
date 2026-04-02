@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Falooers | تسجيل الدخول</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page">
+  <header class="login-header">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">F</span>
+      <div>
+        <strong>Falooers</strong>
+        <p>الرجوع للصفحة الرئيسية</p>
+      </div>
+    </a>
+  </header>
+
+  <main class="login-page-shell">
+    <section class="login-copy-card">
+      <span class="eyebrow">بوابة الحسابات</span>
+      <h1>ادخل كعضو أو أدمن من صفحة مستقلة، ثم ارجع للوحة الترويج أو الإدارة.</h1>
+      <p>
+        إذا دخلت بحساب الأدمن سيتم فتح لوحة الإدارة المخفية في الصفحة الرئيسية تلقائيًا.
+        أما الحساب العادي فيدخل للمنصة بدون إظهار أدوات الإدارة.
+      </p>
+      <div class="login-hint">
+        <span class="card-label">بيانات أدمن تجريبية</span>
+        <strong>admin@falooers.local</strong>
+        <small>كلمة المرور: Admin123!</small>
+      </div>
+    </section>
+
+    <section class="auth-card login-fixed-card">
+      <div class="auth-tabs">
+        <button class="auth-tab is-active" id="loginTabButton" type="button">تسجيل الدخول</button>
+        <button class="auth-tab" id="signupTabButton" type="button">إنشاء حساب</button>
+      </div>
+
+      <form id="authLoginForm" class="auth-form">
+        <label>
+          البريد الإلكتروني
+          <input id="authEmailInput" type="email" placeholder="name@example.com" required>
+        </label>
+        <label>
+          كلمة المرور
+          <input id="authPasswordInput" type="password" placeholder="••••••••" required>
+        </label>
+        <button class="button button-primary button-full" type="submit">دخول</button>
+      </form>
+
+      <form id="signupForm" class="auth-form is-hidden">
+        <label>
+          الاسم الكامل
+          <input id="signupNameInput" type="text" placeholder="اسمك الكامل" required>
+        </label>
+        <label>
+          البريد الإلكتروني
+          <input id="signupEmailInput" type="email" placeholder="name@example.com" required>
+        </label>
+        <label>
+          كلمة المرور
+          <input id="signupPasswordInput" type="password" placeholder="اختر كلمة مرور قوية" required>
+        </label>
+        <button class="button button-primary button-full" type="submit">إنشاء الحساب</button>
+      </form>
+
+      <div class="auth-status" id="authStatus">
+        <strong>الحالة الحالية:</strong>
+        <span>زائر</span>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="auth.js"></script>
+</body>
+</html>

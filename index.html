@@ -30,8 +30,9 @@
         <div class="topbar-links">
           <a href="#workflow">كيف تعمل</a>
           <a href="#campaign-builder">ابدأ حملة</a>
+          <a href="#scheduler-board">النشر المجدول</a>
           <a href="#discovery-board">لوحة الاكتشاف</a>
-          <a href="#auth-portal">تسجيل الدخول</a>
+          <a href="login.html">تسجيل الدخول</a>
         </div>
       </nav>
 
@@ -45,7 +46,7 @@
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#campaign-builder">أطلق حملة تجريبية</a>
-            <a class="button button-secondary" href="#auth-portal">تسجيل دخول / إنشاء حساب</a>
+            <a class="button button-secondary" href="login.html">تسجيل دخول / إنشاء حساب</a>
           </div>
           <ul class="hero-metrics">
             <li>
@@ -270,6 +271,75 @@
         </div>
       </section>
 
+      <section id="scheduler-board" class="section section-scheduler">
+        <div class="section-heading">
+          <span class="section-tag">النشر الترويجي</span>
+          <h2>جدولة منشورات يومية منظمة لكل منصة بروابط المتجر وعبارات جاهزة.</h2>
+          <p>
+            يضيف الرائج حساباته وروابطها العامة ونص الإعلان وساعة النشر اليومية، ثم تُبنى قائمة نشر منظمة.
+            التنفيذ المباشر داخل تويتر/إنستغرام/سناب يحتاج ربطًا رسميًا لاحقًا، لكن هذه اللوحة تنظّم الجدولة والمحتوى الآن.
+          </p>
+        </div>
+
+        <div class="scheduler-layout">
+          <form class="scheduler-form" id="schedulerForm">
+            <label>
+              المنصة
+              <select id="schedulePlatformInput">
+                <option value="X / Twitter">X / Twitter</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Snapchat">Snapchat</option>
+                <option value="TikTok">TikTok</option>
+                <option value="Telegram">Telegram</option>
+              </select>
+            </label>
+            <label>
+              اسم الحساب أو المعرف
+              <input id="scheduleHandleInput" type="text" placeholder="@store_account" required>
+            </label>
+            <label>
+              رابط الحساب العام
+              <input id="scheduleProfileInput" type="url" placeholder="https://social.com/store_account" required>
+            </label>
+            <label>
+              رابط المتجر
+              <input id="scheduleStoreInput" type="url" placeholder="https://store.example.com" required>
+            </label>
+            <label>
+              ساعة النشر اليومية
+              <input id="scheduleTimeInput" type="time" value="20:00" required>
+            </label>
+            <label>
+              نص العبارة الترويجية
+              <textarea
+                id="scheduleTextInput"
+                rows="4"
+                placeholder="اكتب عبارة ترويجية مع دعوة واضحة لزيارة المتجر"
+                required
+              ></textarea>
+            </label>
+            <button class="button button-primary button-full" type="submit">إضافة خطة نشر يومية</button>
+          </form>
+
+          <aside class="scheduler-preview-card">
+            <div class="card-label">قائمة النشر المنظمة</div>
+            <h3>مخطط يومي متعدد المنصات</h3>
+            <p>كل عنصر هنا يمثل منشورًا مجدولًا بوقت ثابت، مع زر فتح الحساب ورابط المتجر ومعاينة النص.</p>
+            <div class="scheduler-stats-grid">
+              <article>
+                <span>المنشورات المجدولة</span>
+                <strong id="scheduledCountValue">0</strong>
+              </article>
+              <article>
+                <span>أقرب نشر</span>
+                <strong id="nextPublishValue">20:00</strong>
+              </article>
+            </div>
+            <div class="schedule-list" id="scheduleList"></div>
+          </aside>
+        </div>
+      </section>
+
       <section id="discovery-board" class="section section-discovery">
         <div class="section-heading">
           <span class="section-tag">لوحة الاكتشاف</span>
@@ -311,68 +381,6 @@
             <strong id="campaignCount">3</strong>
             <p>كل حملة جديدة تُضاف إلى قائمة الاكتشاف ويمكن للأدمن اعتمادها أو تعليقها.</p>
           </article>
-        </div>
-      </section>
-
-      <section id="auth-portal" class="section section-auth">
-        <div class="section-heading">
-          <span class="section-tag">بوابة الحساب</span>
-          <h2>تسجيل دخول موحد للمستخدمين والإدارة مع إنشاء حساب جديد.</h2>
-          <p>يمكنك الدخول كعضو عادي أو كأدمن من نفس النموذج. لوحة الأدمن تبقى مخفية حتى يتم التحقق من حساب الإدارة.</p>
-        </div>
-
-        <div class="auth-shell">
-          <div class="auth-card">
-            <div class="auth-tabs">
-              <button class="auth-tab is-active" id="loginTabButton" type="button">تسجيل الدخول</button>
-              <button class="auth-tab" id="signupTabButton" type="button">إنشاء حساب</button>
-            </div>
-
-            <form id="authLoginForm" class="auth-form">
-              <label>
-                البريد الإلكتروني
-                <input id="authEmailInput" type="email" placeholder="name@example.com" required>
-              </label>
-              <label>
-                كلمة المرور
-                <input id="authPasswordInput" type="password" placeholder="••••••••" required>
-              </label>
-              <button class="button button-primary button-full" type="submit">دخول</button>
-              <p class="auth-note">يمكن للأدمن الدخول ببياناته من هذا النموذج نفسه.</p>
-            </form>
-
-            <form id="signupForm" class="auth-form is-hidden">
-              <label>
-                الاسم الكامل
-                <input id="signupNameInput" type="text" placeholder="اسمك الكامل" required>
-              </label>
-              <label>
-                البريد الإلكتروني
-                <input id="signupEmailInput" type="email" placeholder="name@example.com" required>
-              </label>
-              <label>
-                كلمة المرور
-                <input id="signupPasswordInput" type="password" placeholder="اختر كلمة مرور" required>
-              </label>
-              <button class="button button-primary button-full" type="submit">إنشاء الحساب</button>
-            </form>
-
-            <div class="auth-status" id="authStatus">
-              <strong>الحالة الحالية:</strong>
-              <span>زائر</span>
-            </div>
-          </div>
-
-          <div class="auth-card auth-info-card">
-            <span class="card-label">الوصول للإدارة</span>
-            <h3>لوحة الأدمن غير ظاهرة في الواجهة العامة.</h3>
-            <p>عند تسجيل الدخول بحساب الإدارة، يتم كشف لوحة الأدمن تلقائيًا داخل الصفحة وتفعيل الصلاحيات المرتبطة بالدور.</p>
-            <ul class="policy-list">
-              <li>الأعضاء العاديون لا يشاهدون لوحة الإدارة.</li>
-              <li>إنشاء الحساب يضيف المستخدم محليًا داخل النسخة التجريبية.</li>
-              <li>تسجيل الدخول الإداري يفتح أدوات الاعتماد وإدارة الأعضاء.</li>
-            </ul>
-          </div>
         </div>
       </section>
 

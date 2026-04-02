@@ -597,6 +597,76 @@ textarea {
   padding-top: 8px;
 }
 
+.login-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(31, 122, 116, 0.16), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(200, 90, 46, 0.16), transparent 34%),
+    linear-gradient(180deg, #f8f2e9 0%, #f4ede3 100%);
+}
+
+.login-header {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding-top: 24px;
+}
+
+.login-page-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  min-height: calc(100vh - 96px);
+  display: grid;
+  grid-template-columns: 1fr 440px;
+  gap: 24px;
+  align-items: start;
+  padding: 36px 0 48px;
+}
+
+.login-copy-card {
+  margin-top: 40px;
+  border-radius: 36px;
+  padding: 42px;
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.login-copy-card h1 {
+  margin: 18px 0 14px;
+  line-height: 1.3;
+  font-size: clamp(2rem, 3vw, 3.3rem);
+}
+
+.login-copy-card p {
+  color: var(--muted);
+  line-height: 1.9;
+}
+
+.login-fixed-card {
+  position: sticky;
+  top: 24px;
+  justify-self: end;
+  width: min(440px, 100%);
+}
+
+.login-hint {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.login-hint strong,
+.login-hint small {
+  display: block;
+  margin-top: 10px;
+}
+
+.login-hint small {
+  color: var(--muted);
+}
+
 .auth-shell {
   display: grid;
   grid-template-columns: 1fr 0.9fr;
@@ -848,6 +918,119 @@ textarea {
   font-size: 2rem;
 }
 
+.section-scheduler {
+  padding-top: 12px;
+}
+
+.scheduler-layout {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.scheduler-form,
+.scheduler-preview-card {
+  border-radius: 30px;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.scheduler-form {
+  display: grid;
+  gap: 18px;
+}
+
+.scheduler-form label {
+  display: grid;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.scheduler-form input,
+.scheduler-form select,
+.scheduler-form textarea {
+  border: 1px solid rgba(61, 39, 24, 0.14);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text);
+}
+
+.scheduler-preview-card h3 {
+  margin: 14px 0 10px;
+}
+
+.scheduler-preview-card p {
+  color: var(--muted);
+  line-height: 1.9;
+}
+
+.scheduler-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.scheduler-stats-grid article {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.scheduler-stats-grid span {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.scheduler-stats-grid strong {
+  font-size: 1.8rem;
+}
+
+.schedule-list {
+  display: grid;
+  gap: 14px;
+}
+
+.schedule-item {
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.schedule-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.schedule-item p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.schedule-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.schedule-links a {
+  border-radius: 14px;
+  padding: 10px 14px;
+  background: rgba(31, 122, 116, 0.08);
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .toast {
   position: fixed;
   left: 24px;
@@ -871,6 +1054,8 @@ textarea {
 @media (max-width: 1100px) {
   .admin-shell,
   .auth-shell,
+  .login-page-shell,
+  .scheduler-layout,
   .hero-grid,
   .campaign-layout,
   .overview-grid,
@@ -892,6 +1077,7 @@ textarea {
 
   .hero-copy,
   .hero-card,
+  .login-copy-card,
   .admin-console {
     padding: 28px;
   }
@@ -918,7 +1104,12 @@ textarea {
   .filter-bar,
   .topbar-links,
   .card-actions,
-  .table-actions {
+  .table-actions,
+  .schedule-links {
     gap: 10px;
+  }
+
+  .login-fixed-card {
+    position: static;
   }
 }
